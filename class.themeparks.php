@@ -247,6 +247,17 @@ class TP_ThemeParks {
         flush_rewrite_rules();
     }
 
+    public static function date_time(int $timestamp, ?string $format = null) {
+        if ($format === null || $format === 'absolute') {
+            $format = get_option('date_format') . ' ' . get_option('time_format');
+        }
+
+        $dt = new DateTime('@' . $timestamp, new DateTimeZone('UTC'));
+        $dt->setTimezone(wp_timezone());
+
+        return $dt->format($format);
+    }
+
     /** LINKS */
     public static function get_link_park_item($park_id) {
         return site_url(self::option_get_parks_route() . '/' . urlencode($park_id) . '/');
@@ -322,13 +333,19 @@ class TP_ThemeParks {
             'close' => '',
             'status' => '',
             'wait_data' => [],
-            'wait_data_date' => date_i18n('F j, Y', $dt->getTimestamp()),
+            'wait_data_date' => date_i18n(get_option('date_format'), $dt->getTimestamp()),
         ];
 
         if (!empty($record)) {
             $info = array_replace($info, [
-                'open' => date_i18n('F j, g:i a', $record->open_time, true),
-                'close' => date_i18n('F j, g:i a', $record->close_time, true),
+                'open' => sprintf(
+                    '<span class="park-hours park-open-time">%s</span>',
+                        esc_html(self::date_time($record->open_time))
+                ),
+                'close' => sprintf(
+                    '<span class="park-hours park-close-time">%s</span>',
+                    esc_html(self::date_time($record->close_time))
+                ),
                 'status' => $record->type,
             ]);
         }
@@ -345,10 +362,7 @@ class TP_ThemeParks {
         ", $start_of_day, $end_of_day, $park_id);
         $records = $db->get_results($query);
         foreach ($records as $record) {
-            $record_dt = new DateTime($record->last_update);
-            $record_dt->setTimezone(wp_timezone());
-
-            $time = $record_dt->format('g:i a');
+            $time = self::date_time($record->last_update, get_option('time_format'));
             if (!isset($info[$time])) {
                 $info['wait_data'][$time] = [
                     'time' => $time,

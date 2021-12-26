@@ -42,7 +42,7 @@ foreach ($__park_info['wait_data'] as $__item) {
                     </h1>
                 </header>
                 <div class="entry-content">
-                    <p style="margin:0"><?php echo __('Park Hours'); ?>:&nbsp;<?php echo esc_html($__park_info['open']); ?>&nbsp;to&nbsp;<?php echo esc_html($__park_info['close']); ?></p>
+                    <p style="margin:0"><?php echo __('Park Hours'); ?>:&nbsp;<?php echo $__park_info['open']; ?>&nbsp;to&nbsp;<?php echo $__park_info['close']; ?></p>
                     <p style="margin:0"><?php echo __('Park Status'); ?>:&nbsp;<?php echo esc_html(ucfirst($__park_info['status'])); ?></p>
 
                     <div id="park-wait--times--chart" data-wait="<?php echo esc_attr(json_encode($__js_data)); ?>"
