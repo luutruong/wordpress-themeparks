@@ -2,11 +2,17 @@
 
 require_once TP_THEMEPARKS__PLUGIN_DIR . 'class.themeparks.php';
 
+$__parks_route = TP_ThemeParks::option_get_parks_route();
+if ($__parks_route === false) {
+    // not exists
+    TP_ThemeParks::option_update_parks_route('parks');
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST'
     && current_user_can('manage_options')
 ) {
-    $api_url = sanitize_text_field($_POST['api_url'] ?? '');
-    TP_ThemeParks::option_update_api_url($api_url);
+    TP_ThemeParks::option_update_api_url(sanitize_text_field($_POST['api_url'] ?? ''));
+    TP_ThemeParks::option_update_parks_route(sanitize_text_field($_POST['park_route'] ?? ''));
 }
 
 ?>
@@ -17,12 +23,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
         <table class="form-table" role="presentation">
             <tbody>
                 <tr>
-                    <th scope="row">
-                        <label for="apiurl">Api URL</label>
-                    </th>
+                    <th scope="row"><label for="apiurl"><?php echo esc_html(__('Api URL')); ?></label></th>
                     <td>
                         <input name="api_url" type="url" id="apiurl"
                                value="<?php echo esc_attr(TP_ThemeParks::option_get_api_url()) ?>" class="regular-text" />
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="park-route-name"><?php echo esc_html(__('Parks Route Name')); ?></label></th>
+                    <td>
+                        <input name="park_route" type="text" id="park-route-name"
+                               pattern="[a-zA-Z0-9\-]+" minlength="3"
+                               value="<?php echo esc_attr(TP_ThemeParks::option_get_parks_route()); ?>" class="regular-text" />
                     </td>
                 </tr>
             </tbody>

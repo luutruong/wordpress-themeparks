@@ -237,13 +237,19 @@ class TP_ThemeParks {
     }
 
     public static function rewrites_init(): void {
+        $route_name = self::option_get_parks_route();
         add_rewrite_rule(
-            '^parks(\/)?([0-9a-zA-Z]{32})?\/?$',
-            'index.php?page' . 'name=' . self::PAGE_NAME_PARKS . '&' . self::QUERY_VAR_PARK_ID . '=$matches[2]',
+            '^(' . $route_name . ')(\/)?([0-9a-zA-Z]{32})?\/?$',
+            'index.php?page' . 'name=' . self::PAGE_NAME_PARKS . '&' . self::QUERY_VAR_PARK_ID . '=$matches[3]',
             'top'
         );
 
         flush_rewrite_rules();
+    }
+
+    /** LINKS */
+    public static function get_link_park_item($park_id) {
+        return site_url(self::option_get_parks_route() . '/' . urlencode($park_id) . '/');
     }
 
     /** OPTIONS */
@@ -252,6 +258,16 @@ class TP_ThemeParks {
     }
     public static function option_get_api_url() {
         return get_option('tp_themeparks_api_url');
+    }
+    public static function option_update_parks_route(string $route) {
+        if (empty($route) || preg_match('#[^a-zA-Z0-9\-]+#', $route)) {
+            wp_die(__('Please enter valid route name'));
+        }
+
+        update_option('tp_themeparks_park_route', $route);
+    }
+    public static function option_get_parks_route() {
+        return get_option('tp_themeparks_park_route');
     }
 
     public static function bulk_update_parks_status(array $ids, bool $active) {
