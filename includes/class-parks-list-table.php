@@ -27,8 +27,8 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
 
     protected function column_cb($item) {
         return '<input type="checkbox" name="checked[]"'
-            . ' value="' . esc_attr($item->id) . '"'
-            . ' id="checkbox_park_' . esc_attr($item->id) . '" />';
+            . ' value="' . esc_attr($item->park_id) . '"'
+            . ' id="checkbox_park_' . esc_attr($item->park_id) . '" />';
     }
 
     protected function column_default($item, $column_name) {
@@ -51,7 +51,7 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
                 'page' => $menu_slug,
                 'action' => $item->active ? 'deactivate' : 'activate',
                 'nonce' => wp_create_nonce('tp_themeparks_park_toggle'),
-                'id' => $item->id,
+                'park_id' => $item->park_id,
             ], '', '&'));
 
             $name_html .= '<div class="row-actions visible">

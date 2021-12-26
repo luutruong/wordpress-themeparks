@@ -16,25 +16,25 @@
         }
 
         $__tp_api = new TP_ThemeParks_Api($__tp_api_url);
-        TP_ThemeParks::insert_parks($__tp_api->parks());
+        TP_ThemeParks::insert_parks($__tp_api->get_parks());
     }
 
     $__tp_park_item_toggle = function () use ($__tp_menu_slug) {
         $action = $_GET['action'] ?? '';
         $nonce = $_GET['nonce'] ?? '';
-        $id = intval($_GET['id'] ?? 0);
+        $park_id = sanitize_text_field($_GET['park_id'] ?? '');
 
         if (!wp_verify_nonce($nonce, 'tp_themeparks_park_toggle')) {
             return null;
         }
 
         if (!in_array($action, ['activate', 'deactivate'], true)
-            || $id <= 0
+            || empty($park_id)
         ) {
             return null;
         }
 
-        TP_ThemeParks::update_park_status($id, $action === 'activate');
+        TP_ThemeParks::update_park_status($park_id, $action === 'activate');
 
         $redirect_url = admin_url('admin.php?' . http_build_query([
             'page' => $__tp_menu_slug,
@@ -55,8 +55,13 @@
         check_admin_referer('bulk-' . TP_ThemeParks_Parks_List_Table::TP_PARK_PLURAL);
 
         $checked = $_POST['checked'] ?? [];
-        $checked = array_map('intval', $checked);
+        $checked = array_map(function ($val) {
+            $val = trim($val);
+
+            return sanitize_text_field($val);
+        }, $checked);
         $checked = array_unique($checked);
+        $checked = array_diff($checked, ['']);
 
         if (count($checked) > 0 && in_array($action, ['activate-selected', 'deactivate-selected'], true)) {
             TP_ThemeParks::bulk_update_parks_status($checked, $action === 'activate-selected');

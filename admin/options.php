@@ -1,12 +1,12 @@
 <?php
 
+require_once TP_THEMEPARKS__PLUGIN_DIR . 'class.themeparks.php';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST'
     && current_user_can('manage_options')
 ) {
     $api_url = sanitize_text_field($_POST['api_url'] ?? '');
-    if (add_option('tp_themeparks_api_url', $api_url) === false) {
-        update_option('tp_themeparks_api_url', $api_url);
-    }
+    TP_ThemeParks::option_update_api_url($api_url);
 }
 
 ?>
@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
                     </th>
                     <td>
                         <input name="api_url" type="url" id="apiurl"
-                               value="<?php echo esc_attr(get_option('tp_themeparks_api_url')) ?>" class="regular-text" />
+                               value="<?php echo esc_attr(TP_ThemeParks::option_get_api_url()) ?>" class="regular-text" />
                     </td>
                 </tr>
             </tbody>

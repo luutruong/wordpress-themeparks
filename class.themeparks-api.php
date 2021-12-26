@@ -6,13 +6,19 @@ class TP_ThemeParks_Api {
         $this->apiUrl = rtrim($apiUrl, '/');
     }
 
-    public function parks() {
-        $response = $this->request('GET', 'parks');
+    public function get_parks() {
+        $response = $this->do_request('GET', 'parks');
 
         return $response['parks'] ?? [];
     }
 
-    protected function request(string $method, string $path, array $params = []) {
+    public function get_wait_times(string $park_id) {
+        $response = $this->do_request('GET', 'parks/' . urlencode($park_id) . '/wait-times');
+
+        return $response['results'] ?? [];
+    }
+
+    protected function do_request(string $method, string $path, array $params = []) {
         $url = $this->apiUrl . '/' . $path;
         $method = strtoupper($method);
 
