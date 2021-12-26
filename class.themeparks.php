@@ -1,7 +1,7 @@
 <?php
 
 class TP_ThemeParks {
-    const QUERY_VAR_PARK_ID = '__park_id';
+    const QUERY_VAR_PARK_SLUG = '__park_slug';
     const PAGE_NAME_PARKS = '__parks';
 
     const CRON_HOOK_NAME = 'tp_themeparks_cron';
@@ -219,7 +219,7 @@ class TP_ThemeParks {
     public static function filter_template_include($template) {
         $pageName = get_query_var('page' . 'name');
         if ($pageName === self::PAGE_NAME_PARKS) {
-            $parkId = get_query_var(self::QUERY_VAR_PARK_ID, '');
+            $parkId = get_query_var(self::QUERY_VAR_PARK_SLUG, '');
             if ($parkId !== '') {
                 return TP_THEMEPARKS__PLUGIN_DIR . 'templates/park-single.php';
             }
@@ -231,7 +231,7 @@ class TP_ThemeParks {
     }
 
     public static function filter_query_vars($query_vars) {
-        $query_vars[] = self::QUERY_VAR_PARK_ID;
+        $query_vars[] = self::QUERY_VAR_PARK_SLUG;
 
         return $query_vars;
     }
@@ -239,8 +239,8 @@ class TP_ThemeParks {
     public static function rewrites_init(): void {
         $route_name = self::option_get_parks_route();
         add_rewrite_rule(
-            '^(' . $route_name . ')(\/)?([0-9a-zA-Z]{32})?\/?$',
-            'index.php?page' . 'name=' . self::PAGE_NAME_PARKS . '&' . self::QUERY_VAR_PARK_ID . '=$matches[3]',
+            '^(' . $route_name . ')(\/)?([0-9a-zA-Z\-]+)?\/?$',
+            'index.php?page' . 'name=' . self::PAGE_NAME_PARKS . '&' . self::QUERY_VAR_PARK_SLUG . '=$matches[3]',
             'top'
         );
 
@@ -259,8 +259,8 @@ class TP_ThemeParks {
     }
 
     /** LINKS */
-    public static function get_link_park_item($park_id) {
-        return site_url(self::option_get_parks_route() . '/' . urlencode($park_id) . '/');
+    public static function get_link_park_item($park) {
+        return site_url(self::option_get_parks_route() . '/' . urlencode($park->slug) . '/');
     }
 
     /** OPTIONS */
@@ -379,7 +379,7 @@ class TP_ThemeParks {
         $db = self::db();
         $condition_sql = '1=1';
         if ($active_only) {
-            $condition_sql .= ' AND active = \'1\'';
+            $condition_sql .= ' AND `active` = \'1\'';
         }
 
         $order_clause = '';
@@ -389,7 +389,7 @@ class TP_ThemeParks {
 
         return $db->get_results("
             SELECT *
-            FROM {$db->prefix}tp_parks
+            FROM `{$db->prefix}tp_parks`
             WHERE {$condition_sql}
             {$order_clause}
         ");
@@ -399,8 +399,8 @@ class TP_ThemeParks {
         $db = self::db();
         $query = $db->prepare("
             SELECT *
-            FROM {$db->prefix}tp_parks
-            WHERE park_id = %s
+            FROM `{$db->prefix}tp_parks`
+            WHERE `park_id` = %s
         ", $park_id);
 
         return $db->get_row($query);
@@ -438,23 +438,36 @@ class TP_ThemeParks {
         }
     }
 
+    public static function get_park_by_slug(string $slug) {
+        $db = self::db();
+        $query = $db->prepare("
+            SELECT *
+            FROM `{$db->prefix}tp_parks`
+            WHERE `slug` = %s
+        ", $slug);
+
+        return $db->get_row($query);
+    }
+
     protected static function init_tables(): void {
         // check tables.
         $db = self::db();
         if (!$db->query( "SHOW TABLES LIKE '{$db->prefix}tp_parks'")) {
             $sqlTable = "
-                CREATE TABLE IF NOT EXISTS {$db->prefix}tp_parks (
-                    park_id VARBINARY(32) NOT NULL,
-                    name VARCHAR(100) NOT NULL,
-                    location VARCHAR(50) NOT NULL,
-                    latitude VARCHAR(25) NOT NULL,
-                    longitude VARCHAR(25) NOT NULL,
-                    timezone VARCHAR(32) NOT NULL,
-                    map_url VARCHAR(255) NOT NULL,
-                    active TINYINT(3) UNSIGNED NOT NULL DEFAULT '0',
-                    last_sync_date INT UNSIGNED NOT NULL DEFAULT '0',
-                    PRIMARY KEY park_id (park_id),
-                    KEY active (active)
+                CREATE TABLE IF NOT EXISTS `{$db->prefix}tp_parks` (
+                    `park_id` VARBINARY(32) NOT NULL,
+                    `name` VARCHAR(100) NOT NULL,
+                    `slug` VARCHAR(100) DEFAULT NULL,
+                    `location` VARCHAR(50) NOT NULL,
+                    `latitude` VARCHAR(25) NOT NULL,
+                    `longitude` VARCHAR(25) NOT NULL,
+                    `timezone` VARCHAR(32) NOT NULL,
+                    `map_url` VARCHAR(255) NOT NULL,
+                    `active` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0',
+                    `last_sync_date` INT UNSIGNED NOT NULL DEFAULT '0',
+                    PRIMARY KEY `park_id` (`park_id`),
+                    UNIQUE KEY `slug` (`slug`),
+                    KEY `active` (`active`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci;
             ";
             $rows_count = $db->query($sqlTable);
@@ -463,22 +476,53 @@ class TP_ThemeParks {
                 die('Failed to create table: ' . $sqlTable);
             }
         }
+        // migrate 1.0.1
+
+        if (!$db->query("SHOW COLUMNS FROM `{$db->prefix}tp_parks` LIKE 'slug'")) {
+            $addColumn = "ALTER TABLE `{$db->prefix}tp_parks` ADD COLUMN `slug` VARCHAR(100) DEFAULT NULL";
+            $result = $db->query($addColumn);
+            if ($result === false) {
+                wp_die($db->last_error);
+            }
+
+            $records = $db->get_results("
+                SELECT *
+                FROM `{$db->prefix}tp_parks`
+            ");
+            foreach ($records as $record) {
+                $slug = strtolower(sanitize_title_with_dashes($record->name));
+                $_dupe = self::get_park_by_slug($slug);
+                if (!empty($_dupe)) {
+                    $slug .= '-' . substr($record->park_id, 0, 4);
+                }
+
+                $db->update(
+                    "{$db->prefix}tp_parks",
+                    [
+                        'slug' => $slug
+                    ],
+                    [
+                        'park_id' => $record->park_id
+                    ]
+                );
+            }
+        }
 
         if (!$db->query("SHOW TABLES LIKE '{$db->prefix}tp_park_wait'")) {
             $sqlTable = "
-                CREATE TABLE IF NOT EXISTS {$db->prefix}tp_park_wait (
-                    wait_id VARBINARY(32) NOT NULL,
-                    name VARCHAR(100) NOT NULL,
-                    active TINYINT(3) UNSIGNED NOT NULL DEFAULT '0',
-                    park_id VARBINARY(32) NOT NULL,
-                    status VARCHAR(25) NOT NULL,
-                    wait_time INT UNSIGNED NOT NULL DEFAULT '0',
-                    fast_pass TINYINT(3) UNSIGNED NOT NULL DEFAULT '0',
-                    extra_data TEXT NOT NULL,
-                    last_update INT UNSIGNED NOT NULL DEFAULT '0',
-                    PRIMARY KEY wait_id (wait_id),
-                    KEY last_update (last_update),
-                    KEY park_id (park_id)
+                CREATE TABLE IF NOT EXISTS `{$db->prefix}tp_park_wait` (
+                    `wait_id` VARBINARY(32) NOT NULL,
+                    `name` VARCHAR(100) NOT NULL,
+                    `active` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0',
+                    `park_id` VARBINARY(32) NOT NULL,
+                    `status` VARCHAR(25) NOT NULL,
+                    `wait_time` INT UNSIGNED NOT NULL DEFAULT '0',
+                    `fast_pass` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0',
+                    `extra_data` TEXT NOT NULL,
+                    `last_update` INT UNSIGNED NOT NULL DEFAULT '0',
+                    PRIMARY KEY `wait_id` (`wait_id`),
+                    KEY `last_update` (`last_update`),
+                    KEY `park_id` (`park_id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci;
             ";
             $rows_count = $db->query($sqlTable);
@@ -490,16 +534,16 @@ class TP_ThemeParks {
 
         if (!$db->query("SHOW TABLES LIKE '{$db->prefix}tp_park_opening'")) {
             $sqlTable = "
-                CREATE TABLE IF NOT EXISTS {$db->prefix}tp_park_opening (
-                    id INT UNSIGNED AUTO_INCREMENT,
-                    park_id VARBINARY(32) NOT NULL,
-                    open_date VARCHAR(16) NOT NULL,
-                    open_time INT UNSIGNED NOT NULL,
-                    close_time INT UNSIGNED NOT NULL,
-                    type VARCHAR(32) NOT NULL,
-                    extra_data TEXT NOT NULL,
-                    PRIMARY KEY id (id),
-                    UNIQUE KEY park_id_date (park_id, open_date)
+                CREATE TABLE IF NOT EXISTS `{$db->prefix}tp_park_opening` (
+                    `id` INT UNSIGNED AUTO_INCREMENT,
+                    `park_id` VARBINARY(32) NOT NULL,
+                    `open_date` VARCHAR(16) NOT NULL,
+                    `open_time` INT UNSIGNED NOT NULL,
+                    `close_time` INT UNSIGNED NOT NULL,
+                    `type` VARCHAR(32) NOT NULL,
+                    `extra_data` TEXT NOT NULL,
+                    PRIMARY KEY `id` (`id`),
+                    UNIQUE KEY `park_id_date` (`park_id`, `open_date`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci;
             ";
             $rows_count = $db->query($sqlTable);

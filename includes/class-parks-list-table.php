@@ -1,5 +1,7 @@
 <?php
 
+require_once TP_THEMEPARKS__PLUGIN_DIR . 'class.themeparks.php';
+
 class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
     const TP_SCREEN_ID = 'tp-themeparks-parks-list';
     const TP_PARK_PLURAL = 'tp-themeparks-parks';
@@ -40,7 +42,8 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
                     $this->column_default($item, 'timezone')
                 )) . '</p></div>';
             $desc_html .= '<div class="inactive second plugin-version-author-uri">
-                <a href="' . esc_attr($item->map_url) . '" target="_blank">View maps</a>
+                <a href="' . esc_url($item->map_url) . '" target="_blank">' . esc_html(__('View maps')) . '</a>
+                <a href="' . esc_url(TP_ThemeParks::get_link_park_item($item)) . '" target="_blank">' . esc_html(__('View park')) . '</a>
             </div>';
 
             return $desc_html;
@@ -73,7 +76,7 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
         $this->parks_active = count(array_filter($items, function ($item) {
             return $item->active > 0;
         }));
-        $this->parks_inactive = $this->parks_total - $this->parks_inactive;
+        $this->parks_inactive = $this->parks_total - $this->parks_active;
 
         $filter_status = sanitize_text_field($_GET['status'] ?? '');
         if ($filter_status === 'active') {

@@ -4,9 +4,9 @@ require_once TP_THEMEPARKS__PLUGIN_DIR . 'class.themeparks.php';
 require_once TP_THEMEPARKS__PLUGIN_DIR . 'class.themeparks-api.php';
 
 ob_start();
-$__park_id = get_query_var(TP_ThemeParks::QUERY_VAR_PARK_ID);
+$__slug = get_query_var(TP_ThemeParks::QUERY_VAR_PARK_SLUG);
 
-$__park = TP_ThemeParks::get_park($__park_id);
+$__park = TP_ThemeParks::get_park_by_slug($__slug);
 if (empty($__park) || empty($__park->active)) {
     return;
 }
