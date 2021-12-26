@@ -18,6 +18,12 @@ class TP_ThemeParks_Api {
         return $response['results'] ?? [];
     }
 
+    public function get_opening_times(string $park_id) {
+        $response = $this->do_request('GET', 'parks/' . urlencode($park_id) . '/opening-times');
+
+        return $response['results'] ?? [];
+    }
+
     protected function do_request(string $method, string $path, array $params = []) {
         $url = $this->apiUrl . '/' . $path;
         $method = strtoupper($method);

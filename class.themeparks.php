@@ -18,8 +18,13 @@ class TP_ThemeParks {
         ob_start();
         self::rewrites_init();
 
-        add_action(self::CRON_HOOK_NAME, [__CLASS__, 'cronRun']);
+        add_action(self::CRON_HOOK_NAME, [__CLASS__, 'cron_run']);
+        if (is_admin() && current_user_can('manage_options')) {
+            add_action('admin_menu', [__CLASS__, 'action_admin_menu']);
+        }
+
         add_filter('cron_schedules', [__CLASS__, 'filter_cron_schedules']);
+        add_filter('pre_handle_404', [__CLASS__, 'filter_pre_handle_404']);
 
         $timestamp = wp_next_scheduled(self::CRON_HOOK_NAME);
         if (!$timestamp) {
@@ -35,13 +40,9 @@ class TP_ThemeParks {
 
         add_filter('query_vars', [__CLASS__, 'filter_query_vars']);
         add_filter('template_include', [__CLASS__, 'filter_template_include']);
-
-        if (is_admin() && current_user_can('manage_options')) {
-            add_action('admin_menu', [__CLASS__, 'action_admin_menu']);
-        }
     }
 
-    public static function cronRun() {
+    public static function cron_run() {
         $parks = self::get_parks(true, 'last_sync_date');
         if (empty($parks)) {
             return;
@@ -58,10 +59,10 @@ class TP_ThemeParks {
         $start = microtime(true);
         $db = self::db();
 
-        foreach ($parks as $park) {
-            $wait_times = $api->get_wait_times($park->park_id);
+        $sync_wait_times = function ($park_id) use ($db, $api) {
+            $wait_times = $api->get_wait_times($park_id);
             if (empty($wait_times)) {
-                continue;
+                return;
             }
 
             foreach ($wait_times as $wait_entry) {
@@ -73,7 +74,7 @@ class TP_ThemeParks {
                     INSERT IGNORE INTO {$db->prefix}tp_park_wait
                         (wait_id, name, active, status, wait_time, fast_pass, extra_data, last_update, park_id)
                     VALUES
-                        (%s, %s, %d, %s, %d, %d, %s, %d)
+                        (%s, %s, %d, %s, %d, %d, %s, %d, %s)
                     ON DUPLICATE KEY UPDATE
                         name = VALUES(name),
                         active = VALUES(active),
@@ -92,10 +93,54 @@ class TP_ThemeParks {
                     $wait_entry['fastPass'] ? 1 : 0,
                     json_encode($wait_entry['meta']),
                     max(0, strtotime($wait_entry['lastUpdate'], time())),
-                    $park->park_id
+                    $park_id
                 );
                 $db->query($sql);
             }
+        };
+        $sync_opening_times = function ($park_id) use ($db, $api) {
+            $opening_times = $api->get_opening_times($park_id);
+            if (empty($opening_times)) {
+                return;
+            }
+
+            foreach ($opening_times as $opening_time) {
+                try {
+                    $open_time_dt = DateTime::createFromFormat(DateTime::ISO8601, $opening_time['openingTime']);
+                    $open_time_dt->setTimezone(new DateTimeZone('UTC'));
+
+                    $close_time_dt = DateTime::createFromFormat(DateTime::ISO8601, $opening_time['closingTime']);
+                    $close_time_dt->setTimezone(new DateTimeZone('UTC'));
+                } catch (Throwable $e) {
+                    continue;
+                }
+
+                $query = $db->prepare("
+                    INSERT IGNORE INTO {$db->prefix}tp_park_opening
+                        (park_id, open_date, open_time, close_time, type, extra_data)
+                    VALUES
+                        (%s, %s, %d, %d, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                        open_time = VALUES(open_time),
+                        close_time = VALUES(close_time),
+                        type = VALUES(type),
+                        extra_data = VALUES(extra_data)
+                ",
+                    $park_id,
+                    $opening_time['date'],
+                    $open_time_dt->getTimestamp(),
+                    $close_time_dt->getTimestamp(),
+                    strtolower($opening_time['type']),
+                    json_encode($opening_time)
+                );
+
+                $db->query($query);
+            }
+        };
+
+        foreach ($parks as $park) {
+            call_user_func($sync_wait_times, $park->park_id);
+            call_user_func($sync_opening_times, $park->park_id);
 
             $db->update(
                 $db->prefix . 'tp_parks',
@@ -152,7 +197,17 @@ class TP_ThemeParks {
         wp_unschedule_event($cron_timestamp, self::CRON_HOOK_NAME);
     }
 
-    public static function filter_cron_schedules(array $schedules) {
+    public static function filter_pre_handle_404($is_404) {
+        $pageName = get_query_var('page' . 'name');
+        if ($pageName === self::PAGE_NAME_PARKS) {
+            // prevent return 404 status in our pages.
+            return true;
+        }
+
+        return $is_404;
+    }
+
+    public static function filter_cron_schedules($schedules) {
         $schedules[self::CRON_RECURRENCE] = [
             'interval' => 300,
             'display' => esc_html__('Every Five Minutes')
@@ -164,8 +219,8 @@ class TP_ThemeParks {
     public static function filter_template_include($template) {
         $pageName = get_query_var('page' . 'name');
         if ($pageName === self::PAGE_NAME_PARKS) {
-            $parkId = (int) get_query_var(self::QUERY_VAR_PARK_ID, 0);
-            if ($parkId > 0) {
+            $parkId = get_query_var(self::QUERY_VAR_PARK_ID, '');
+            if ($parkId !== '') {
                 return TP_THEMEPARKS__PLUGIN_DIR . 'templates/park-single.php';
             }
 
@@ -183,7 +238,7 @@ class TP_ThemeParks {
 
     public static function rewrites_init(): void {
         add_rewrite_rule(
-            '^parks(\/)?([0-9]+)?\/?$',
+            '^parks(\/)?([0-9a-zA-Z]{32})?\/?$',
             'index.php?page' . 'name=' . self::PAGE_NAME_PARKS . '&' . self::QUERY_VAR_PARK_ID . '=$matches[2]',
             'top'
         );
@@ -223,6 +278,71 @@ class TP_ThemeParks {
             ],
             ['park_id' => $id]
         );
+    }
+
+    public static function get_park_open_info(string $park_id, ?string $date = null) {
+        if ($date === null) {
+            $dt = new DateTime('now', wp_timezone());
+        } else {
+            try {
+                $dt = DateTime::createFromFormat('Y-m-d', $date, wp_timezone());
+            } catch (Throwable $e) {
+                return null;
+            }
+        }
+
+        $date = $dt->format('Y-m-d');
+
+        $db = self::db();
+        $query = $db->prepare("
+            SELECT *
+            FROM {$db->prefix}tp_park_opening
+            WHERE park_id = %s AND open_date = %s
+        ", $park_id, $date);
+
+        $record = $db->get_row($query);
+        $info = [
+            'open' => '',
+            'close' => '',
+            'status' => '',
+            'wait_data' => [],
+            'wait_data_date' => date_i18n('F j, Y', $dt->getTimestamp()),
+        ];
+
+        if (!empty($record)) {
+            $info = array_replace($info, [
+                'open' => date_i18n('F j, g:i a', $record->open_time, true),
+                'close' => date_i18n('F j, g:i a', $record->close_time, true),
+                'status' => $record->type,
+            ]);
+        }
+
+        $start_of_day = (clone $dt)->setTime(0, 0)->getTimestamp();
+        $end_of_day = (clone $dt)-> setTime(23, 59, 59)->getTimestamp();
+
+        $query = $db->prepare("
+            SELECT *
+            FROM {$db->prefix}tp_park_wait
+            WHERE last_update BETWEEN %d AND %d
+                AND park_id = %s
+            ORDER BY last_update
+        ", $start_of_day, $end_of_day, $park_id);
+        $records = $db->get_results($query);
+        foreach ($records as $record) {
+            $record_dt = new DateTime($record->last_update);
+            $record_dt->setTimezone(wp_timezone());
+
+            $time = $record_dt->format('g:i a');
+            if (!isset($info[$time])) {
+                $info['wait_data'][$time] = [
+                    'time' => $time,
+                    'total' => 0
+                ];
+            }
+            $info['wait_data'][$time]['total'] += $record->wait_time;
+        }
+
+        return $info;
     }
 
     public static function get_parks(bool $active_only = false, string $order = 'name') {
@@ -292,7 +412,7 @@ class TP_ThemeParks {
         // check tables.
         $db = self::db();
         if (!$db->query( "SHOW TABLES LIKE '{$db->prefix}tp_parks'")) {
-            $sqlTableParks = "
+            $sqlTable = "
                 CREATE TABLE IF NOT EXISTS {$db->prefix}tp_parks (
                     park_id VARBINARY(32) NOT NULL,
                     name VARCHAR(100) NOT NULL,
@@ -307,15 +427,15 @@ class TP_ThemeParks {
                     KEY active (active)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci;
             ";
-            $rows_count = $db->query($sqlTableParks);
+            $rows_count = $db->query($sqlTable);
             if ($rows_count === false) {
                 echo "<pre>";
-                die('Failed to create table: ' . $sqlTableParks);
+                die('Failed to create table: ' . $sqlTable);
             }
         }
 
         if (!$db->query("SHOW TABLES LIKE '{$db->prefix}tp_park_wait'")) {
-            $sqlTableRecords = "
+            $sqlTable = "
                 CREATE TABLE IF NOT EXISTS {$db->prefix}tp_park_wait (
                     wait_id VARBINARY(32) NOT NULL,
                     name VARCHAR(100) NOT NULL,
@@ -331,10 +451,31 @@ class TP_ThemeParks {
                     KEY park_id (park_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci;
             ";
-            $rows_count = $db->query($sqlTableRecords);
+            $rows_count = $db->query($sqlTable);
             if ($rows_count === false) {
                 echo "<pre>";
-                die('Failed to create table: ' . $sqlTableRecords);
+                die('Failed to create table: ' . $sqlTable);
+            }
+        }
+
+        if (!$db->query("SHOW TABLES LIKE '{$db->prefix}tp_park_opening'")) {
+            $sqlTable = "
+                CREATE TABLE IF NOT EXISTS {$db->prefix}tp_park_opening (
+                    id INT UNSIGNED AUTO_INCREMENT,
+                    park_id VARBINARY(32) NOT NULL,
+                    open_date VARCHAR(16) NOT NULL,
+                    open_time INT UNSIGNED NOT NULL,
+                    close_time INT UNSIGNED NOT NULL,
+                    type VARCHAR(32) NOT NULL,
+                    extra_data TEXT NOT NULL,
+                    PRIMARY KEY id (id),
+                    UNIQUE KEY park_id_date (park_id, open_date)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci;
+            ";
+            $rows_count = $db->query($sqlTable);
+            if ($rows_count === false) {
+                echo "<pre>";
+                die('Failed to create table: ' . $sqlTable);
             }
         }
     }
