@@ -56,7 +56,7 @@ class TP_ThemeParks_Park {
                 $grouped[$record['extra_data']['entityId']][] = $record;
             }
         }
-        file_put_contents(__DIR__.'/wait_data.log', var_export($grouped, true));
+
         $attractions = [];
         foreach ($grouped as $id => $_records) {
             $wait_total = 0;
@@ -84,13 +84,20 @@ class TP_ThemeParks_Park {
             if (!isset($info[$time])) {
                 $info[$time] = [
                     $time,
-                    0
+                    []
                 ];
             }
-            $info[$time][1] += $record['wait_time'];
+            $info[$time][1][] = (int) $record['wait_time'];
         }
 
-        return array_values($info);
+        $data = [];
+        foreach ($info as $pair) {
+            list($time, $wait_times) = $pair;
+
+            $data[] = [$time, ceil(array_sum($wait_times) / count($wait_times))];
+        }
+
+        return $data;
     }
 
     public function get_open_time() {

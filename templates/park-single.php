@@ -98,14 +98,14 @@ $__park_info = new TP_ThemeParks_Park($__park);
                     </h1>
                 </header>
                 <div class="entry-content">
-                    <p style="margin:0"><?php echo sprintf('%s %s %s %s',
-                            esc_html(__('Park Hours')),
+                    <p style="margin:0"><?php echo sprintf('%s: %s %s %s',
+                            '<strong>' . esc_html(__('Park Hours')) . '</strong>',
                             $__park_info->get_open_time(),
                             esc_html(__('to')),
                             $__park_info->get_close_time()
                         ); ?></p>
                     <p style="margin:0"><?php echo sprintf('%s: %s',
-                            esc_html(__('Park Status')),
+                            '<strong>' . esc_html(__('Park Status')) . '</strong>',
                             $__park_info->get_status()); ?></p>
 
                     <div id="park-wait--times--chart" data-wait="<?php echo esc_attr(json_encode($__park_info->get_wait_data_chart())); ?>"
