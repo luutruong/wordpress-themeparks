@@ -48,13 +48,11 @@ class TP_ThemeParks_Park {
         $wait_data = $this->get_wait_data();
 
         foreach ($wait_data as $record) {
-            if (empty($record['extra_data']) || !isset($record['extra_data']['type'])) {
+            if ($record['wait_type'] !== 'attraction') {
                 continue;
             }
 
-            if ($record['extra_data']['type'] === 'ATTRACTION') {
-                $grouped[$record['extra_data']['entityId']][] = $record;
-            }
+            $grouped[$record['wait_type_id']][] = $record;
         }
 
         $attractions = [];
@@ -64,12 +62,16 @@ class TP_ThemeParks_Park {
                 $wait_total += $_record['wait_time'];
             }
 
+            $latitude = $_records[0]['extra_data']['latitude'];
+            $longitude = $_records[0]['extra_data']['longitude'];
+
             $attractions[$id] = [
                 'name' => $_records[0]['name'],
                 'wait_average' => round($wait_total / count($_records), 1),
                 'status' => ucfirst($_records[0]['status']),
                 'total_records' => count($_records),
                 'wait_total' => $wait_total,
+                'map_url' => 'https://maps.google.com/?ll=' . urlencode($latitude) . ',' . urlencode($longitude),
             ];
         }
 

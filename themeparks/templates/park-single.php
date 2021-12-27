@@ -168,6 +168,7 @@ $__park_info = new TP_ThemeParks_Park($__park);
                                             <?php endif; ?>
                                         </small>
                                     </li>
+                                    <li><small><a href="<?php echo esc_url($__attraction['map_url']); ?>" target="_blank"><?php echo esc_html(__('View map')); ?></a></small></li>
                                 </ul>
                             </li>
                         <?php endforeach; ?>
