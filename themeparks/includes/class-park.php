@@ -73,6 +73,10 @@ class TP_ThemeParks_Park {
             ];
         }
 
+        uasort($attractions, function ($a, $b) {
+            return strcasecmp($a['name'], $b['name']);
+        });
+
         return $attractions;
     }
 
