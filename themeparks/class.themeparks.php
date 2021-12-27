@@ -86,6 +86,8 @@ class TP_ThemeParks {
                     continue;
                 }
 
+                $last_update = max(0, strtotime($wait_entry['lastUpdate'], time()));
+
                 $sql = $db->prepare("
                     INSERT IGNORE INTO {$db->prefix}tp_park_wait
                         (wait_id, name, active, status, wait_time, fast_pass, extra_data, last_update, park_id)
@@ -108,7 +110,7 @@ class TP_ThemeParks {
                     $wait_entry['waitTime'],
                     $wait_entry['fastPass'] ? 1 : 0,
                     json_encode($wait_entry['meta']),
-                    max(0, strtotime($wait_entry['lastUpdate'], time())),
+                    $last_update > 0 ? $last_update : time(),
                     $park_id
                 );
                 $db->query($sql);
