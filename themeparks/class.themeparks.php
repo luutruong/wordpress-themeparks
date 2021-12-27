@@ -51,6 +51,11 @@ class TP_ThemeParks {
 
         delete_option('tp_themeparks_api_url');
         delete_option('tp_themeparks_park_route');
+
+        $timestamp = wp_next_scheduled(self::CRON_HOOK_NAME);
+        if ($timestamp) {
+            wp_unschedule_event($timestamp, self::CRON_HOOK_NAME);
+        }
     }
 
     public static function cron_run() {
