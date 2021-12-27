@@ -24,7 +24,7 @@ get_header();
                     <ul style="margin-top:0;margin-bottom:0">
                         <?php foreach (TP_ThemeParks::get_parks(true) as $__park): ?>
                             <li>
-                                <a href="<?php echo esc_url(TP_ThemeParks::get_link_park_item($__park)); ?>"
+                                <a href="<?php echo esc_url(TP_ThemeParks::get_park_item_url($__park)); ?>"
                                    class="themeparks-park--item"><?php echo esc_html($__park->name); ?></a>
                             </li>
                         <?php endforeach; ?>

@@ -259,7 +259,10 @@ class TP_ThemeParks {
     }
 
     /** LINKS */
-    public static function get_link_park_item($park) {
+    public static function get_park_list_url() {
+        return site_url(self::option_get_parks_route() . '/');
+    }
+    public static function get_park_item_url($park) {
         return site_url(self::option_get_parks_route() . '/' . urlencode($park->slug) . '/');
     }
 
@@ -323,8 +326,8 @@ class TP_ThemeParks {
         $db = self::db();
         $query = $db->prepare("
             SELECT *
-            FROM {$db->prefix}tp_park_opening
-            WHERE park_id = %s AND open_date = %s
+            FROM `{$db->prefix}tp_park_opening`
+            WHERE `park_id` = %s AND `open_date` = %s
         ", $park_id, $date);
 
         $record = $db->get_row($query);
@@ -333,7 +336,7 @@ class TP_ThemeParks {
             'close' => '',
             'status' => '',
             'wait_data' => [],
-            'wait_data_date' => date_i18n(get_option('date_format'), $dt->getTimestamp()),
+            'wait_data_date' => $dt->format(get_option('date_format')),
         ];
 
         if (!empty($record)) {
@@ -355,10 +358,10 @@ class TP_ThemeParks {
 
         $query = $db->prepare("
             SELECT *
-            FROM {$db->prefix}tp_park_wait
-            WHERE last_update BETWEEN %d AND %d
-                AND park_id = %s
-            ORDER BY last_update
+            FROM `{$db->prefix}tp_park_wait`
+            WHERE `last_update` BETWEEN %d AND %d
+                AND `park_id` = %s
+            ORDER BY `last_update`
         ", $start_of_day, $end_of_day, $park_id);
         $records = $db->get_results($query);
         foreach ($records as $record) {
@@ -415,10 +418,11 @@ class TP_ThemeParks {
                 'latitude' => $park['latitude'],
                 'longitude' => $park['longitude'],
                 'timezone' => $park['timeZone'],
-                'map_url' => $park['mapUrl']
+                'map_url' => $park['mapUrl'],
+                'slug' => strtolower(sanitize_title_with_dashes($park['name'])),
             ];
             if (self::get_park($park['id'])) {
-                $db->update(
+                $result = $db->update(
                     $db->prefix . 'tp_parks',
                     $park_data,
                     [
@@ -426,7 +430,7 @@ class TP_ThemeParks {
                     ]
                 );
             } else {
-                $db->insert(
+                $result = $db->insert(
                     $db->prefix . 'tp_parks',
                     $park_data + [
                         'park_id' => $park['id'],
@@ -434,6 +438,10 @@ class TP_ThemeParks {
                         'last_sync_date' => 0
                     ]
                 );
+            }
+
+            if ($result === false) {
+                wp_die($db->last_error);
             }
         }
     }

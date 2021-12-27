@@ -43,7 +43,7 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
                 )) . '</p></div>';
             $desc_html .= '<div class="inactive second plugin-version-author-uri">
                 <a href="' . esc_url($item->map_url) . '" target="_blank">' . esc_html(__('View maps')) . '</a>
-                <a href="' . esc_url(TP_ThemeParks::get_link_park_item($item)) . '" target="_blank">' . esc_html(__('View park')) . '</a>
+                <a href="' . esc_url(TP_ThemeParks::get_park_item_url($item)) . '" target="_blank">' . esc_html(__('View park')) . '</a>
             </div>';
 
             return $desc_html;

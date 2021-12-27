@@ -19,6 +19,40 @@ add_filter('document_title_parts', function ($parts) use ($__park) {
 
 add_action('wp_head', function () {
    echo "<script type=\"text/javascript\" src=\"https://www.gstatic.com/charts/loader.js\"></script>";
+   echo "<style>
+.park-hours {
+    display: inline-block;
+    padding: .35em .65em;
+    font-size: .75em;
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: .25rem;
+    background-color: rgb(13,110,253);
+}
+.breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+.breadcrumb-item+.breadcrumb-item::before {
+    float: left;
+    padding-right: .5rem;
+    color: #6c757d;
+    content: \"/\";
+}
+.breadcrumb-item+.breadcrumb-item {
+    padding-left: .5rem;
+}
+.breadcrumb-item.active {
+    color: #6c757d;
+}
+   </style>";
 });
 
 get_header();
@@ -36,6 +70,16 @@ foreach ($__park_info['wait_data'] as $__item) {
     <main <?php generate_do_attr( 'main' ); ?>>
         <article id="post-0" class="post-0 post type-post status-publish format-standard hentry category-uncategorized entry">
             <div class="inside-article">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="<?php echo esc_url(site_url()); ?>"><?php echo esc_html(get_option('blogname')) ?></a></li>
+                        <li class="breadcrumb-item">
+                            <a href="<?php echo esc_url(TP_ThemeParks::get_park_list_url()); ?>"><?php echo esc_html(__('All Parks')); ?></a>
+                        </li>
+                        <li class="breadcrumb-item active" aria-current="page"><?php echo __('Wait Times at') . ' ' . esc_html($__park->name); ?></li>
+                    </ol>
+                </nav>
+
                 <header class="entry-header alignwide">
                     <h1 class="entry-title">
                         <?php echo __('Wait Times at') . ' ' . esc_html($__park->name); ?>
