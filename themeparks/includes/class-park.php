@@ -43,7 +43,7 @@ class TP_ThemeParks_Park {
         return $this->date_dt->format(get_option('date_format'));
     }
 
-    public function get_attractions() {
+    public function get_attractions(?string $status = null) {
         $grouped = [];
         $wait_data = $this->get_wait_data();
 
@@ -76,6 +76,11 @@ class TP_ThemeParks_Park {
         uasort($attractions, function ($a, $b) {
             return strcasecmp($a['name'], $b['name']);
         });
+        if ($status !== null) {
+            $attractions = array_filter($attractions, function ($a) use ($status) {
+                return strtolower($a['status']) === $status;
+            });
+        }
 
         return $attractions;
     }

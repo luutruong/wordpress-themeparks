@@ -87,33 +87,39 @@ class TP_ThemeParks {
                 }
 
                 $last_update = max(0, strtotime($wait_entry['lastUpdate'], time()));
+                $type = $wait_entry['meta']['type'] ?? '';
+                $type_id = $wait_entry['meta']['entityId'] ?? '';
 
-                $sql = $db->prepare("
-                    INSERT IGNORE INTO {$db->prefix}tp_park_wait
-                        (wait_id, name, active, status, wait_time, fast_pass, extra_data, last_update, park_id)
-                    VALUES
-                        (%s, %s, %d, %s, %d, %d, %s, %d, %s)
-                    ON DUPLICATE KEY UPDATE
-                        name = VALUES(name),
-                        active = VALUES(active),
-                        status = VALUES(status),
-                        wait_time = VALUES(wait_time),
-                        fast_pass = VALUES(fast_pass),
-                        extra_data = VALUES(extra_data),
-                        last_update = VALUES(last_update),
-                        park_id = VALUES(park_id)
-                ",
-                    $wait_entry['id'],
-                    $wait_entry['name'],
-                    $wait_entry['active'] ? 1 : 0,
-                    strtolower($wait_entry['status']),
-                    $wait_entry['waitTime'],
-                    $wait_entry['fastPass'] ? 1 : 0,
-                    json_encode($wait_entry['meta']),
-                    $last_update > 0 ? $last_update : time(),
-                    $park_id
-                );
-                $db->query($sql);
+                $insert_data = [
+                    'wait_id' => $wait_entry['id'],
+                    'name' => $wait_entry['name'],
+                    'active' => $wait_entry['active'] ? 1 : 0,
+                    'status' => $last_update === 0 ? 'unknown' : strtolower($wait_entry['status']),
+                    'wait_time' => $wait_entry['waitTime'],
+                    'fast_pass' => $wait_entry['fastPass'] ? 1 : 0,
+                    'extra_data' => json_encode($wait_entry['meta']),
+                    'last_update' => $last_update > 0 ? $last_update : time(),
+                    'park_id' => $park_id,
+                    'wait_type' => strtolower($type),
+                    'wait_type_id' => $type_id
+                ];
+                $get_row_sql = $db->prepare("
+                    SELECT *
+                    FROM `{$db->prefix}tp_park_wait`
+                    WHERE `wait_id` = %s
+                ", $wait_entry['id']);
+                if ($db->get_row($get_row_sql)) {
+                    unset($insert_data['wait_id']);
+                    $db->update(
+                        $db->prefix . 'tp_park_wait',
+                        $insert_data,
+                        [
+                            'wait_id' => $wait_entry['id']
+                        ]
+                    );
+                } else {
+                    $db->insert($db->prefix . 'tp_park_wait', $insert_data);
+                }
             }
         };
         $sync_opening_times = function ($park_id) use ($db, $api) {
@@ -434,8 +440,8 @@ class TP_ThemeParks {
                 die('Failed to create table: ' . $sqlTable);
             }
         }
-        // migrate 1.0.1
 
+        // migrate 1.0.1
         if (!$db->query("SHOW COLUMNS FROM `{$db->prefix}tp_parks` LIKE 'slug'")) {
             $addColumn = "ALTER TABLE `{$db->prefix}tp_parks` ADD COLUMN `slug` VARCHAR(100) DEFAULT NULL";
             $result = $db->query($addColumn);
@@ -508,6 +514,32 @@ class TP_ThemeParks {
             if ($rows_count === false) {
                 echo "<pre>";
                 die('Failed to create table: ' . $sqlTable);
+            }
+        }
+
+        // migrate 1.0.3
+        if (!$db->query("SHOW COLUMNS FROM `{$db->prefix}tp_park_wait` LIKE 'wait_type'")) {
+            $db->query("ALTER TABLE `{$db->prefix}tp_park_wait` ADD COLUMN `wait_type` VARCHAR(25) NOT NULL DEFAULT ''");
+            $db->query("ALTER TABLE `{$db->prefix}tp_park_wait` ADD COLUMN `wait_type_id` VARCHAR(50) NOT NULL DEFAULT ''");
+            $db->query("ALTER TABLE `{$db->prefix}tp_park_wait` ADD KEY `wait_type_id` (`wait_type`, `wait_type_id`)");
+
+            // migrate existing data.
+            $rows = $db->get_results("SELECT * FROM `{$db->prefix}tp_park_wait`");
+            foreach ($rows as $row) {
+                $extra_data = (array) json_decode($row->extra_data, true);
+                $type = $extra_data['type'] ?? '';
+                $type_id = $extra_data['entityId'] ?? '';
+
+                $db->update(
+                    $db->prefix . 'tp_park_wait',
+                    [
+                        'wait_type' => strtolower($type),
+                        'wait_type_id' => $type_id
+                    ],
+                    [
+                        'wait_id' => $row->wait_id
+                    ]
+                );
             }
         }
     }
