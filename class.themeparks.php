@@ -310,74 +310,6 @@ class TP_ThemeParks {
         );
     }
 
-    public static function get_park_open_info(string $park_id, ?string $date = null) {
-        if ($date === null) {
-            $dt = new DateTime('now', wp_timezone());
-        } else {
-            try {
-                $dt = DateTime::createFromFormat('Y-m-d', $date, wp_timezone());
-            } catch (Throwable $e) {
-                return null;
-            }
-        }
-
-        $date = $dt->format('Y-m-d');
-
-        $db = self::db();
-        $query = $db->prepare("
-            SELECT *
-            FROM `{$db->prefix}tp_park_opening`
-            WHERE `park_id` = %s AND `open_date` = %s
-        ", $park_id, $date);
-
-        $record = $db->get_row($query);
-        $info = [
-            'open' => '',
-            'close' => '',
-            'status' => '',
-            'wait_data' => [],
-            'wait_data_date' => $dt->format(get_option('date_format')),
-        ];
-
-        if (!empty($record)) {
-            $info = array_replace($info, [
-                'open' => sprintf(
-                    '<span class="park-hours park-open-time">%s</span>',
-                        esc_html(self::date_time($record->open_time))
-                ),
-                'close' => sprintf(
-                    '<span class="park-hours park-close-time">%s</span>',
-                    esc_html(self::date_time($record->close_time))
-                ),
-                'status' => $record->type,
-            ]);
-        }
-
-        $start_of_day = (clone $dt)->setTime(0, 0)->getTimestamp();
-        $end_of_day = (clone $dt)-> setTime(23, 59, 59)->getTimestamp();
-
-        $query = $db->prepare("
-            SELECT *
-            FROM `{$db->prefix}tp_park_wait`
-            WHERE `last_update` BETWEEN %d AND %d
-                AND `park_id` = %s
-            ORDER BY `last_update`
-        ", $start_of_day, $end_of_day, $park_id);
-        $records = $db->get_results($query);
-        foreach ($records as $record) {
-            $time = self::date_time($record->last_update, get_option('time_format'));
-            if (!isset($info[$time])) {
-                $info['wait_data'][$time] = [
-                    'time' => $time,
-                    'total' => 0
-                ];
-            }
-            $info['wait_data'][$time]['total'] += $record->wait_time;
-        }
-
-        return $info;
-    }
-
     public static function get_parks(bool $active_only = false, string $order = 'name') {
         $db = self::db();
         $condition_sql = '1=1';
@@ -562,7 +494,7 @@ class TP_ThemeParks {
         }
     }
 
-    protected static function db(): \wpdb {
+    public static function db(): \wpdb {
         global $wpdb;
 
         return $wpdb;

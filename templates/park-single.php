@@ -2,6 +2,7 @@
 
 require_once TP_THEMEPARKS__PLUGIN_DIR . 'class.themeparks.php';
 require_once TP_THEMEPARKS__PLUGIN_DIR . 'class.themeparks-api.php';
+require_once TP_THEMEPARKS__PLUGIN_DIR . 'includes/class-park.php';
 
 ob_start();
 $__slug = get_query_var(TP_ThemeParks::QUERY_VAR_PARK_SLUG);
@@ -52,17 +53,28 @@ add_action('wp_head', function () {
 .breadcrumb-item.active {
     color: #6c757d;
 }
+.site-content .content-area {
+    width: 100%;
+    box-sizing: border-box;
+}
+.list-inline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.list-inline li {
+    display: inline;
+}
+.list--bullet li + li:before {
+    content: \"\\00B7\\20\";
+}
    </style>";
 });
 
 get_header();
 
 $__api_url = TP_ThemeParks::option_get_api_url();
-$__park_info = TP_ThemeParks::get_park_open_info($__park->park_id);
-$__js_data = [];
-foreach ($__park_info['wait_data'] as $__item) {
-    $__js_data[] = [$__item['time'], $__item['total']];
-}
+$__park_info = new TP_ThemeParks_Park($__park);
 
 ?>
 
@@ -86,10 +98,17 @@ foreach ($__park_info['wait_data'] as $__item) {
                     </h1>
                 </header>
                 <div class="entry-content">
-                    <p style="margin:0"><?php echo __('Park Hours'); ?>:&nbsp;<?php echo $__park_info['open']; ?>&nbsp;to&nbsp;<?php echo $__park_info['close']; ?></p>
-                    <p style="margin:0"><?php echo __('Park Status'); ?>:&nbsp;<?php echo esc_html(ucfirst($__park_info['status'])); ?></p>
+                    <p style="margin:0"><?php echo sprintf('%s %s %s %s',
+                            esc_html(__('Park Hours')),
+                            $__park_info->get_open_time(),
+                            esc_html(__('to')),
+                            $__park_info->get_close_time()
+                        ); ?></p>
+                    <p style="margin:0"><?php echo sprintf('%s: %s',
+                            esc_html(__('Park Status')),
+                            $__park_info->get_status()); ?></p>
 
-                    <div id="park-wait--times--chart" data-wait="<?php echo esc_attr(json_encode($__js_data)); ?>"
+                    <div id="park-wait--times--chart" data-wait="<?php echo esc_attr(json_encode($__park_info->get_wait_data_chart())); ?>"
                          style="width: 100%;height: 500px"></div>
                     <script type="text/javascript">
                         google.charts.load('current', {packages: ['corechart', 'line']});
@@ -112,13 +131,39 @@ foreach ($__park_info['wait_data'] as $__item) {
                                 theme: {
                                     chartArea: {width: '80%', height: '80%'}
                                 },
-                                title: '<?php echo esc_js(__('Data for ' . $__park_info['wait_data_date'])); ?>'
+                                title: '<?php echo esc_js(__('Data for ' . $__park_info->get_wait_date())); ?>'
                             };
 
                             var chart = new google.visualization.LineChart(chart_element);
                             chart.draw(data, options);
                         }
                     </script>
+
+                    <h3><strong><?php echo esc_html(__('Park Insights')); ?></strong></h3>
+                    <ul>
+                        <li><?php echo esc_html(sprintf(
+                                '%s: %d',
+                                __('Total Attractions'),
+                                count($__park_info->get_attractions())
+                            )); ?></li>
+                    </ul>
+
+                    <h3><strong><?php echo esc_html(__('Attractions')); ?></strong></h3>
+                    <ul>
+                        <?php foreach($__park_info->get_attractions() as $__attraction): ?>
+                            <li>
+                                <ul class="list-inline list--bullet">
+                                    <li><strong><?php echo esc_html($__attraction['name']); ?></strong></li>
+                                    <li><small><?php echo esc_html(sprintf(
+                                            '%s: %s %s',
+                                                __('Average Wait Time'),
+                                                $__attraction['wait_average'],
+                                                __('minutes')
+                                            )); ?></small></li>
+                                </ul>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
                 </div>
             </div>
         </article>
@@ -127,7 +172,6 @@ foreach ($__park_info['wait_data'] as $__item) {
 
 <?php
 
-generate_construct_sidebars();
 get_footer();
 
 ?>
