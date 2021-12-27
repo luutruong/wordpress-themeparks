@@ -6,7 +6,7 @@
 Plugin Name: Theme Parks
 Plugin URI: https://nobita.me
 Description: Display waiting times and opening times each parks.
-Version: 1.0.1
+Version: 1.0.2
 Author: Truong Luu
 */
 
