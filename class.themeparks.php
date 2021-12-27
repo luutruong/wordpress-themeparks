@@ -42,6 +42,17 @@ class TP_ThemeParks {
         add_filter('template_include', [__CLASS__, 'filter_template_include']);
     }
 
+    public static function uninstall() {
+        $db = self::db();
+
+        $db->query("DROP TABLE IF EXIST `{$db->prefix}`tp_parks");
+        $db->query("DROP TABLE IF EXIST `{$db->prefix}`tp_park_opening");
+        $db->query("DROP TABLE IF EXIST `{$db->prefix}`tp_park_wait");
+
+        delete_option('tp_themeparks_api_url');
+        delete_option('tp_themeparks_park_route');
+    }
+
     public static function cron_run() {
         $parks = self::get_parks(true, 'last_sync_date');
         if (empty($parks)) {

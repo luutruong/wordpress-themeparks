@@ -29,3 +29,5 @@ add_action('init', ['TP_ThemeParks', 'initialize']);
 register_activation_hook(__FILE__, ['TP_ThemeParks', 'hook_activation']);
 
 register_deactivation_hook(__FILE__, ['TP_ThemeParks', 'hook_deactivation']);
+
+register_uninstall_hook(__FILE__, ['TP_ThemeParks', 'uninstall']);
