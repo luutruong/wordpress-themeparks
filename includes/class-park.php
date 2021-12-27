@@ -67,7 +67,7 @@ class TP_ThemeParks_Park {
             $attractions[$id] = [
                 'name' => $_records[0]['name'],
                 'wait_average' => round($wait_total / count($_records), 1),
-                'status' => ucfirst($_records[0]['type']),
+                'status' => ucfirst($_records[0]['status']),
                 'total_records' => count($_records),
                 'wait_total' => $wait_total,
             ];

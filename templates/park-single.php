@@ -131,7 +131,7 @@ $__park_info = new TP_ThemeParks_Park($__park);
                                 theme: {
                                     chartArea: {width: '80%', height: '80%'}
                                 },
-                                title: '<?php echo esc_js(__('Data for ' . $__park_info->get_wait_date())); ?>'
+                                title: '<?php echo esc_js(sprintf('%s %s', __('Data for'), $__park_info->get_wait_date())); ?>'
                             };
 
                             var chart = new google.visualization.LineChart(chart_element);
@@ -154,12 +154,20 @@ $__park_info = new TP_ThemeParks_Park($__park);
                             <li>
                                 <ul class="list-inline list--bullet">
                                     <li><strong><?php echo esc_html($__attraction['name']); ?></strong></li>
-                                    <li><small><?php echo esc_html(sprintf(
-                                            '%s: %s %s',
-                                                __('Average Wait Time'),
-                                                $__attraction['wait_average'],
-                                                __('minutes')
-                                            )); ?></small></li>
+                                    <li>
+                                        <small>
+                                            <?php if($__attraction['wait_average'] > 0): ?>
+                                                <?php echo esc_html(sprintf(
+                                                    '%s: %s %s',
+                                                    __('Average Wait Time'),
+                                                    $__attraction['wait_average'],
+                                                    __('minutes')
+                                                )); ?>
+                                            <?php else: ?>
+                                                <?php echo esc_html(sprintf('%s: %s', __('Status'), $__attraction['status'])); ?>
+                                            <?php endif; ?>
+                                        </small>
+                                    </li>
                                 </ul>
                             </li>
                         <?php endforeach; ?>
