@@ -12,7 +12,7 @@
 
     if (isset($_GET['sync']) && $_GET['sync'] === '1') {
         if (empty($__tp_api_url)) {
-            die(__('You may enter themeparks API url.'));
+            die(__('You may enter themeparks API url.', 'themeparks'));
         }
 
         $__tp_api = new TP_ThemeParks_Api($__tp_api_url);

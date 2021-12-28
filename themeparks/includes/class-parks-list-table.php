@@ -22,8 +22,8 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
     public function get_columns() {
         return array(
             'cb' => '<input type="checkbox" />',
-            'name' => __( 'Park' ),
-            'description' => __( 'Description' ),
+            'name' => __('Park', 'themeparks'),
+            'description' => __('Description', 'themeparks'),
         );
     }
 
@@ -42,8 +42,8 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
                     $this->column_default($item, 'timezone')
                 )) . '</p></div>';
             $desc_html .= '<div class="inactive second plugin-version-author-uri">
-                <a href="' . esc_url($item->map_url) . '" target="_blank">' . esc_html(__('View maps')) . '</a>
-                <a href="' . esc_url(TP_ThemeParks::get_park_item_url($item)) . '" target="_blank">' . esc_html(__('View park')) . '</a>
+                <a href="' . esc_url($item->map_url) . '" target="_blank">' . esc_html(__('View maps', 'themeparks')) . '</a>
+                <a href="' . esc_url(TP_ThemeParks::get_park_item_url($item)) . '" target="_blank">' . esc_html(__('View park', 'themeparks')) . '</a>
             </div>';
 
             return $desc_html;

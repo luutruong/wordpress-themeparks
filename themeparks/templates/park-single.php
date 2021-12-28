@@ -13,7 +13,10 @@ if (empty($__park) || empty($__park->active)) {
 }
 
 add_filter('document_title_parts', function ($parts) use ($__park) {
-    $parts['title'] = __('Wait Times at') . ' ' . esc_html($__park->name);
+    $parts['title'] = sprintf('%s %s',
+        esc_html(__('Wait Times at', 'themeparks')),
+        esc_html($__park->name)
+    );
 
     return $parts;
 });
@@ -86,26 +89,29 @@ $__park_info = new TP_ThemeParks_Park($__park);
                     <ol class="breadcrumb">
                         <li class="breadcrumb-item"><a href="<?php echo esc_url(site_url()); ?>"><?php echo esc_html(get_option('blogname')) ?></a></li>
                         <li class="breadcrumb-item">
-                            <a href="<?php echo esc_url(TP_ThemeParks::get_park_list_url()); ?>"><?php echo esc_html(__('All Parks')); ?></a>
+                            <a href="<?php echo esc_url(TP_ThemeParks::get_park_list_url()); ?>"><?php echo esc_html(__('All Parks', 'themeparks')); ?></a>
                         </li>
-                        <li class="breadcrumb-item active" aria-current="page"><?php echo __('Wait Times at') . ' ' . esc_html($__park->name); ?></li>
+                        <li class="breadcrumb-item active" aria-current="page"><?php echo __('Wait Times at', 'themeparks') . ' ' . esc_html($__park->name); ?></li>
                     </ol>
                 </nav>
 
                 <header class="entry-header alignwide">
                     <h1 class="entry-title">
-                        <?php echo __('Wait Times at') . ' ' . esc_html($__park->name); ?>
+                        <?php echo sprintf('%s %s',
+                            esc_html(__('Wait Times at', 'themeparks')),
+                            esc_html($__park->name)
+                        ); ?>
                     </h1>
                 </header>
                 <div class="entry-content">
                     <p style="margin:0"><?php echo sprintf('%s: %s %s %s',
-                            '<strong>' . esc_html(__('Park Hours')) . '</strong>',
+                            '<strong>' . esc_html(__('Park Hours', 'themeparks')) . '</strong>',
                             $__park_info->get_open_time(),
-                            esc_html(__('to')),
+                            esc_html(__('to', 'themeparks')),
                             $__park_info->get_close_time()
                         ); ?></p>
                     <p style="margin:0"><?php echo sprintf('%s: %s',
-                            '<strong>' . esc_html(__('Park Status')) . '</strong>',
+                            '<strong>' . esc_html(__('Park Status', 'themeparks')) . '</strong>',
                             $__park_info->get_status()); ?></p>
 
                     <div id="park-wait--times--chart" data-wait="<?php echo esc_attr(json_encode($__park_info->get_wait_data_chart())); ?>"
@@ -117,21 +123,21 @@ $__park_info = new TP_ThemeParks_Park($__park);
                         function __drawBasic() {
                             var data = new google.visualization.DataTable();
                             data.addColumn('string', 'X');
-                            data.addColumn('number', '<?php echo esc_js(__('Minutes')); ?>');
+                            data.addColumn('number', '<?php echo esc_js(__('Minutes', 'themeparks')); ?>');
                             data.addRows(JSON.parse(chart_element.getAttribute('data-wait')));
 
                             var options = {
                                 hAxis: {
-                                    title: '<?php echo esc_js(__('Time of Day')); ?>',
+                                    title: '<?php echo esc_js(__('Time of Day', 'themeparks')); ?>',
                                 },
                                 vAxis: {
-                                    title: '<?php echo esc_js(__('Wait Time (minutes)')); ?>'
+                                    title: '<?php echo esc_js(__('Wait Time (minutes)', 'themeparks')); ?>'
                                 },
                                 legend: {position: 'none'},
                                 theme: {
-                                    chartArea: {width: '80%', height: '80%'}
+                                    chartArea: {width: '80%', height: '70%'}
                                 },
-                                title: '<?php echo esc_js(sprintf('%s %s', __('Data for'), $__park_info->get_wait_date())); ?>'
+                                title: '<?php echo esc_js(sprintf('%s %s', __('Data for', 'themeparks'), $__park_info->get_wait_date())); ?>'
                             };
 
                             var chart = new google.visualization.LineChart(chart_element);
@@ -139,16 +145,16 @@ $__park_info = new TP_ThemeParks_Park($__park);
                         }
                     </script>
 
-                    <h3><strong><?php echo esc_html(__('Park Insights')); ?></strong></h3>
+                    <h3><strong><?php echo esc_html(__('Park Insights', 'themeparks')); ?></strong></h3>
                     <ul>
                         <li><?php echo esc_html(sprintf(
                                 '%s: %d',
-                                __('Total Attractions'),
+                                __('Total Attractions', 'themeparks'),
                                 count($__park_info->get_attractions())
                             )); ?></li>
                     </ul>
 
-                    <h3><strong><?php echo esc_html(__('Attractions with Wait Times')); ?></strong></h3>
+                    <h3><strong><?php echo esc_html(__('Attractions with Wait Times', 'themeparks')); ?></strong></h3>
                     <ul>
                         <?php foreach($__park_info->get_attractions('operating') as $__attraction): ?>
                             <li>
@@ -159,22 +165,22 @@ $__park_info = new TP_ThemeParks_Park($__park);
                                             <?php if($__attraction['wait_average'] > 0): ?>
                                                 <?php echo esc_html(sprintf(
                                                     '%s: %s %s',
-                                                    __('Average Wait Time'),
+                                                    __('Average Wait Time', 'themeparks'),
                                                     $__attraction['wait_average'],
-                                                    __('minutes')
+                                                    __('minutes', 'themeparks')
                                                 )); ?>
                                             <?php else: ?>
-                                                <?php echo esc_html(sprintf('%s: %s', __('Status'), $__attraction['status'])); ?>
+                                                <?php echo esc_html(sprintf('%s: %s', __('Status', 'themeparks'), $__attraction['status'])); ?>
                                             <?php endif; ?>
                                         </small>
                                     </li>
-                                    <li><small><a href="<?php echo esc_url($__attraction['map_url']); ?>" target="_blank"><?php echo esc_html(__('View map')); ?></a></small></li>
+                                    <li><small><a href="<?php echo esc_url($__attraction['map_url']); ?>" target="_blank"><?php echo esc_html(__('View map', 'themeparks')); ?></a></small></li>
                                 </ul>
                             </li>
                         <?php endforeach; ?>
                     </ul>
 
-                    <h3><strong><?php echo esc_html(__('Attractions Closed')); ?></strong></h3>
+                    <h3><strong><?php echo esc_html(__('Attractions Closed', 'themeparks')); ?></strong></h3>
                     <ul>
                         <?php foreach($__park_info->get_attractions('closed') as $__attraction): ?>
                             <li><strong><?php echo esc_html($__attraction['name']); ?></strong></li>
@@ -182,7 +188,7 @@ $__park_info = new TP_ThemeParks_Park($__park);
                     </ul>
 
                     <?php if($__park_info->get_attractions('refurbishment')): ?>
-                    <h3><strong><?php echo esc_html(__('Attractions Refurbishment')); ?></strong></h3>
+                    <h3><strong><?php echo esc_html(__('Attractions Refurbishment', 'themeparks')); ?></strong></h3>
                     <ul>
                         <?php foreach($__park_info->get_attractions('refurbishment') as $__attraction): ?>
                             <li><strong><?php echo esc_html($__attraction['name']); ?></strong></li>
@@ -191,7 +197,7 @@ $__park_info = new TP_ThemeParks_Park($__park);
                     <?php endif; ?>
 
                     <?php if($__park_info->get_attractions('unknown')): ?>
-                    <h3><strong><?php echo esc_html(__('Attractions Not Reporting')); ?></strong></h3>
+                    <h3><strong><?php echo esc_html(__('Attractions Not Reporting', 'themeparks')); ?></strong></h3>
                     <ul>
                         <?php foreach($__park_info->get_attractions('unknown') as $__attraction): ?>
                             <li><strong><?php echo esc_html($__attraction['name']); ?></strong></li>
