@@ -22,8 +22,8 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
     public function get_columns() {
         return array(
             'cb' => '<input type="checkbox" />',
-            'name' => __('Park', 'themeparks'),
-            'description' => __('Description', 'themeparks'),
+            'name' => __theme_parks_trans('Park'),
+            'description' => __theme_parks_trans('Description'),
         );
     }
 
@@ -42,8 +42,8 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
                     $this->column_default($item, 'timezone')
                 )) . '</p></div>';
             $desc_html .= '<div class="inactive second plugin-version-author-uri">
-                <a href="' . esc_url($item->map_url) . '" target="_blank">' . esc_html(__('View maps', 'themeparks')) . '</a>
-                <a href="' . esc_url(TP_ThemeParks::get_park_item_url($item)) . '" target="_blank">' . esc_html(__('View park', 'themeparks')) . '</a>
+                <a href="' . esc_url($item->map_url) . '" target="_blank">' . esc_html(__theme_parks_trans('View maps')) . '</a>
+                <a href="' . esc_url(TP_ThemeParks::get_park_item_url($item)) . '" target="_blank">' . esc_html(__theme_parks_trans('View park')) . '</a>
             </div>';
 
             return $desc_html;
@@ -59,7 +59,7 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
 
             $name_html .= '<div class="row-actions visible">
                 <span class="' . ($item->active ? 'activate' : 'deactivate')  . '">
-                    <a href="' . esc_attr($link_url) . '" class="edit">' . ($item->active ? __('Deactivate') : __('Activate')) . '</a>
+                    <a href="' . esc_attr($link_url) . '" class="edit">' . ($item->active ? __theme_parks_trans('Deactivate') : __theme_parks_trans('Activate')) . '</a>
                 </span>
             </div>';
 
@@ -129,11 +129,11 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
         $actions = array();
 
         if ($status !== 'active') {
-            $actions['activate-selected'] = __('Activate');
+            $actions['activate-selected'] = __theme_parks_trans('Activate');
         }
 
         if ($status !== 'inactive') {
-            $actions['deactivate-selected'] = __('Deactivate');
+            $actions['deactivate-selected'] = __theme_parks_trans('Deactivate');
         }
 
         return $actions;

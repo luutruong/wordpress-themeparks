@@ -23,14 +23,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
         <table class="form-table" role="presentation">
             <tbody>
                 <tr>
-                    <th scope="row"><label for="apiurl"><?php echo esc_html(__('Api URL', 'themeparks')); ?></label></th>
+                    <th scope="row"><label for="apiurl"><?php echo esc_html(__theme_parks_trans('Api URL')); ?></label></th>
                     <td>
                         <input name="api_url" type="url" id="apiurl"
                                value="<?php echo esc_attr(TP_ThemeParks::option_get_api_url()) ?>" class="regular-text" />
                     </td>
                 </tr>
                 <tr>
-                    <th scope="row"><label for="park-route-name"><?php echo esc_html(__('Parks Route Name', 'themeparks')); ?></label></th>
+                    <th scope="row"><label for="park-route-name"><?php echo esc_html(__theme_parks_trans('Parks Route Name')); ?></label></th>
                     <td>
                         <input name="park_route" type="text" id="park-route-name"
                                pattern="[a-zA-Z0-9\-]+" minlength="3"

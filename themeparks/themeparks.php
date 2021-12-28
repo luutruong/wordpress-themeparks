@@ -23,6 +23,12 @@ if (class_exists('TP_ThemeParks')) {
     exit;
 }
 
+if (!function_exists('__theme_parks_trans')) {
+    function __theme_parks_trans(string $text) {
+        return __($text, 'themeparks');
+    }
+}
+
 require_once TP_THEMEPARKS__PLUGIN_DIR . 'class.themeparks.php';
 
 add_action('init', ['TP_ThemeParks', 'initialize']);

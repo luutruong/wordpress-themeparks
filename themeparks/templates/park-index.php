@@ -2,7 +2,7 @@
 
 require_once TP_THEMEPARKS__PLUGIN_DIR . 'class.themeparks.php';
 add_filter('document_title_parts', function ($parts) {
-    $parts['title'] = __('Wait Times for All Parks', 'themeparks');
+    $parts['title'] = __theme_parks_trans('Wait Times for All Parks');
 
     return $parts;
 });
@@ -17,7 +17,7 @@ get_header();
             <div class="inside-article">
                 <header class="entry-header alignwide">
                     <h1 class="entry-title">
-                        <?php echo esc_html(__('Wait Times for All Parks', 'themeparks')); ?>
+                        <?php echo esc_html(__theme_parks_trans('Wait Times for All Parks')); ?>
                     </h1>
                 </header>
                 <div class="entry-content">

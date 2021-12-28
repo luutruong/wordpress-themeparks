@@ -234,7 +234,7 @@ class TP_ThemeParks {
     public static function filter_cron_schedules($schedules) {
         $schedules[self::CRON_RECURRENCE] = [
             'interval' => 300,
-            'display' => esc_html__('Every Five Minutes', 'themeparks')
+            'display' => __theme_parks_trans('Every Five Minutes')
         ];
 
         return $schedules;
@@ -299,7 +299,7 @@ class TP_ThemeParks {
     }
     public static function option_update_parks_route(string $route) {
         if (empty($route) || preg_match('#[^a-zA-Z0-9\-]+#', $route)) {
-            wp_die(__('Please enter valid route name', 'themeparks'));
+            wp_die(__theme_parks_trans('Please enter valid route name'));
         }
 
         update_option('tp_themeparks_park_route', $route);
