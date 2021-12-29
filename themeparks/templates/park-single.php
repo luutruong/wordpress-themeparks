@@ -147,11 +147,11 @@ $__park_info = new TP_ThemeParks_Park($__park);
 
                     <h3><strong><?php echo esc_html(__theme_parks_trans('Park Insights')); ?></strong></h3>
                     <ul>
-                        <li><?php echo esc_html(sprintf(
-                                '%s: %d',
+                        <li><?php echo sprintf(
+                                '<strong>%s</strong>: %d',
                                 __theme_parks_trans('Total Attractions'),
                                 $__park_info->get_total_attractions()
-                            )); ?></li>
+                            ); ?></li>
                         <?php foreach($__park_info->get_park_insights() as $__insight): ?>
                             <li>
                                 <div><strong><?php echo sprintf('%s (%s)', esc_html($__insight['title']), esc_html($__insight['data']['date_range'])); ?></strong></div>
