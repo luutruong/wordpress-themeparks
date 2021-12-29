@@ -117,7 +117,7 @@ $__park_info = new TP_ThemeParks_Park($__park);
                     <div id="park-wait--times--chart" data-wait="<?php echo esc_attr(json_encode($__park_info->get_wait_data_chart())); ?>"
                          style="width: 100%;height: 500px"></div>
                     <script type="text/javascript">
-                        google.charts.load('current', {packages: ['corechart', 'line']});
+                        google.charts.load('current', {packages: ['corechart', 'bar']});
                         google.charts.setOnLoadCallback(__drawBasic);
                         var chart_element = document.getElementById('park-wait--times--chart');
                         function __drawBasic() {
@@ -129,6 +129,10 @@ $__park_info = new TP_ThemeParks_Park($__park);
                             var options = {
                                 hAxis: {
                                     title: '<?php echo esc_js(__theme_parks_trans('Time of Day')); ?>',
+                                    viewWindow: {
+                                        min: [7, 30, 0],
+                                        max: [17, 30, 0]
+                                    }
                                 },
                                 vAxis: {
                                     title: '<?php echo esc_js(__theme_parks_trans('Wait Time (minutes)')); ?>'
@@ -137,10 +141,18 @@ $__park_info = new TP_ThemeParks_Park($__park);
                                 theme: {
                                     chartArea: {width: '80%', height: '70%'}
                                 },
+                                annotations: {
+                                    alwaysOutside: true,
+                                    textStyle: {
+                                        fontSize: 14,
+                                        color: '#000',
+                                        auraColor: 'none'
+                                    }
+                                },
                                 title: '<?php echo esc_js(sprintf('%s %s', __theme_parks_trans('Data for'), $__park_info->get_wait_date())); ?>'
                             };
 
-                            var chart = new google.visualization.LineChart(chart_element);
+                            var chart = new google.visualization.ColumnChart(chart_element);
                             chart.draw(data, options);
                         }
                     </script>
