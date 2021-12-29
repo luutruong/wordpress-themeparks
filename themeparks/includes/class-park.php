@@ -16,16 +16,18 @@ class TP_ThemeParks_Park {
      */
     protected $opening_record;
     /**
-     * @var array|null
+     * @var array
      */
-    protected $wait_records;
+    protected $attractions;
 
-    public function __construct($park) {
+    public function __construct($park)
+    {
         $this->park = $park;
         $this->setDate();
     }
 
-    public function setDate(?string $date = null) {
+    public function setDate(?string $date = null)
+    {
         if ($date === null) {
             $dt = new DateTime('now', wp_timezone());
         } else {
@@ -36,69 +38,218 @@ class TP_ThemeParks_Park {
 
         // reset cache
         $this->opening_record = null;
-        $this->wait_records = null;
     }
 
-    public function get_wait_date() {
+    public function get_total_attractions()
+    {
+        return count($this->get_attractions());
+    }
+
+    public function get_attractions()
+    {
+        if ($this->attractions !== null) {
+            return $this->attractions;
+        }
+
+        $db = TP_ThemeParks::db();
+        $results = $db->get_results($db->prepare("
+            SELECT *
+            FROM `{$db->prefix}tp_park_attraction`
+            WHERE `park_id` = %s
+            ORDER BY `name`
+        ", $this->park->park_id), ARRAY_A);
+        $attractions = [];
+        foreach ($results as $result) {
+            $attractions[$result['attraction_id']] = $result;
+        }
+        $this->attractions = $attractions;
+
+        return $this->attractions;
+    }
+
+    public function get_attractions_operating()
+    {
+        $start_of_day = (clone $this->date_dt)->setTime(0, 0)->getTimestamp();
+        $end_of_day = (clone $this->date_dt)->setTime(23, 59, 59)->getTimestamp();
+
+        $db = TP_ThemeParks::db();
+        $query = $db->prepare("
+                SELECT `attraction_id`, AVG(`wait_time`) AS `avg_wait_time`
+                FROM `{$db->prefix}tp_park_wait`
+                WHERE `park_id` = %s 
+                    AND `created_date` BETWEEN %d AND %d
+                    AND `status` = %s
+                GROUP BY `attraction_id`
+                ORDER BY `avg_wait_time`
+            ", $this->park->park_id, $start_of_day, $end_of_day, 'operating');
+        $attractions = $this->get_attractions();
+
+        $results = [];
+        foreach ($db->get_results($query) as $record) {
+            $results[$record->attraction_id] = array_replace($attractions[$record->attraction_id], [
+                'avg_wait_time' => ceil($record->avg_wait_time)
+            ]);
+        }
+
+        uasort($results, function ($a, $b) {
+            return strcasecmp($a['name'], $b['name']);
+        });
+
+        return $results;
+    }
+
+    public function get_attractions_closed()
+    {
+        return array_filter($this->get_attractions(), function ($attraction) {
+            return $attraction['status'] === 'closed';
+        });
+    }
+
+    public function get_attractions_refurbishment()
+    {
+        return array_filter($this->get_attractions(), function ($attraction) {
+            return $attraction['status'] === 'refurbishment';
+        });
+    }
+
+    public function get_attractions_not_reporting()
+    {
+        return array_filter($this->get_attractions(), function ($attraction) {
+            return empty($attraction['status']);
+        });
+    }
+
+    public function get_wait_date()
+    {
         return $this->date_dt->format(get_option('date_format'));
     }
 
-    public function get_attractions(?string $status = null) {
-        $grouped = [];
-        $wait_data = $this->get_wait_data();
+    public function get_park_insights()
+    {
+        return [
+            [
+                'title' => 'Lowest wait times today',
+                'data' => $this->get_lowest_wait_time_attractions('today')
+            ],
+            [
+                'title' => 'Lowest wait times this week',
+                'data' => $this->get_lowest_wait_time_attractions('this_week')
+            ],
+            [
+                'title' => 'Lowest wait times this month',
+                'data' => $this->get_lowest_wait_time_attractions('this_month')
+            ],
+            [
+                'title' => 'Lowest wait times this year',
+                'data' => $this->get_lowest_wait_time_attractions('this_year')
+            ],
+        ];
+    }
 
-        foreach ($wait_data as $record) {
-            if ($record['wait_type'] !== 'attraction') {
-                continue;
+    protected function get_lowest_wait_time_attractions(string $type)
+    {
+        $start_date = new DateTime('now', wp_timezone());
+        $end_date = clone $start_date;
+
+        if ($type === 'today') {
+            $start_date->setTime(0, 0);
+            $end_date->setTime(23, 59, 59);
+        } elseif ($type === 'this_week') {
+            $week_days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            $start_of_week = get_option('start_of_week');
+            $start_date->modify($week_days[$start_of_week] . ' this week');
+            $start_date->setTime(0, 0);
+            $end_date = (clone $start_date)->modify('+7 days')->setTime(23, 59, 59);
+        } elseif ($type === 'this_month') {
+            $start_date->modify('first day of this month')->setTime(0, 0);
+            $end_date = (clone $start_date)->modify('last day of this month')->setTime(23, 59, 59);
+        } elseif ($type === 'this_year') {
+            $current_year = (int) $start_date->format('Y');
+            $start_date->setDate($current_year, 1, 1)->setTime(0, 0);
+            if ($current_year % 4 === 0) {
+                $end_date = (clone $start_date)->modify('+366 days')->setTime(23, 59, 59);
+            } else {
+                $end_date = (clone $start_date)->modify('+365 days')->setTime(23, 59, 59);
             }
-
-            $grouped[$record['wait_type_id']][] = $record;
         }
 
+        $start_timestamp = $start_date->getTimestamp();
+        $end_timestamp = $end_date->getTimestamp();
+
+        $db = TP_ThemeParks::db();
+        $query = $db->prepare("
+                SELECT `attraction_id`, AVG(`wait_time`) AS `avg_wait_time`
+                FROM `{$db->prefix}tp_park_wait`
+                WHERE `park_id` = %s 
+                    AND `created_date` BETWEEN %d AND %d
+                    AND `status` = %s
+                GROUP BY `attraction_id`
+                ORDER BY `avg_wait_time`
+            ", $this->park->park_id, $start_timestamp, $end_timestamp, 'operating');
+
+        $results = $db->get_results($query, ARRAY_A);
+
+        $lowest_wait_time = -1.0;
+        foreach ($results as $result) {
+            if (floatval($result['avg_wait_time']) < $lowest_wait_time
+                || $lowest_wait_time === -1.0
+            ) {
+                $lowest_wait_time = floatval($result['avg_wait_time']);
+            }
+        }
+
+        // get all attractions with same avg wait time.
+        $all_attractions = $this->get_attractions();
         $attractions = [];
-        foreach ($grouped as $id => $_records) {
-            $wait_total = 0;
-            foreach ($_records as $_record) {
-                $wait_total += $_record['wait_time'];
+        foreach ($results as $result) {
+            if ($result['avg_wait_time'] == $lowest_wait_time) {
+                $attractions[$result['attraction_id']] = array_replace($all_attractions[$result['attraction_id']], [
+                    'avg_wait_time' => ceil($result['avg_wait_time'])
+                ]);
             }
-
-            $latitude = $_records[0]['extra_data']['latitude'];
-            $longitude = $_records[0]['extra_data']['longitude'];
-
-            $attractions[$id] = [
-                'name' => $_records[0]['name'],
-                'wait_average' => round($wait_total / count($_records), 1),
-                'status' => ucfirst($_records[0]['status']),
-                'total_records' => count($_records),
-                'wait_total' => $wait_total,
-                'map_url' => 'https://maps.google.com/?ll=' . urlencode($latitude) . ',' . urlencode($longitude),
-            ];
         }
 
+        $date_format = get_option('date_format');
         uasort($attractions, function ($a, $b) {
             return strcasecmp($a['name'], $b['name']);
         });
-        if ($status !== null) {
-            $attractions = array_filter($attractions, function ($a) use ($status) {
-                return strtolower($a['status']) === $status;
-            });
-        }
 
-        return $attractions;
+        return [
+            'attractions' => $attractions,
+            'date_range' => $type === 'today'
+                ? $start_date->format($date_format)
+                : sprintf(
+                    '%s - %s',
+                    $start_date->format($date_format),
+                    $end_date->format($date_format)
+                ),
+        ];
     }
 
-    public function get_wait_data_chart() {
-        $wait_data = $this->get_wait_data();
+    public function get_wait_data_chart()
+    {
+        $start_of_day = (clone $this->date_dt)->setTime(0, 0)->getTimestamp();
+        $end_of_day = (clone $this->date_dt)->setTime(23, 59, 59)->getTimestamp();
+
+        $db = TP_ThemeParks::db();
+        $records = $db->get_results($db->prepare("
+            SELECT *
+            FROM `{$db->prefix}tp_park_wait`
+            WHERE `park_id` = %s AND `created_date` BETWEEN %d AND %d
+                AND `status` = %s
+            ORDER BY `created_date`
+        ", $this->park->park_id, $start_of_day, $end_of_day, 'operating'));
         $info = [];
-        foreach ($wait_data as $record) {
-            $time = TP_ThemeParks::date_time($record['last_update'], get_option('time_format'));
+
+        foreach ($records as $record) {
+            $time = TP_ThemeParks::date_time($record->created_date, get_option('time_format'));
             if (!isset($info[$time])) {
                 $info[$time] = [
                     $time,
                     []
                 ];
             }
-            $info[$time][1][] = (int) $record['wait_time'];
+            $info[$time][1][] = (int) $record->wait_time;
         }
 
         $data = [];
@@ -111,7 +262,8 @@ class TP_ThemeParks_Park {
         return $data;
     }
 
-    public function get_open_time() {
+    public function get_open_time()
+    {
         $record = $this->get_opening_record();
 
         return $record === false ? '' : sprintf(
@@ -120,7 +272,8 @@ class TP_ThemeParks_Park {
         );
     }
 
-    public function get_close_time() {
+    public function get_close_time()
+    {
         $record = $this->get_opening_record();
 
         return $record === false ? '' : sprintf(
@@ -129,7 +282,8 @@ class TP_ThemeParks_Park {
         );
     }
 
-    public function get_status() {
+    public function get_status()
+    {
         $record = $this->get_opening_record();
 
         return $record === false ? '' : sprintf(
@@ -138,38 +292,8 @@ class TP_ThemeParks_Park {
         );
     }
 
-    public function get_wait_data(?DateTime $dt = null) {
-        $allow_cache = $dt === null;
-        if ($this->wait_records !== null && $allow_cache) {
-            return $this->wait_records;
-        }
-
-        $db = TP_ThemeParks::db();
-        $dt = $dt ?: $this->date_dt;
-
-        $start_of_day = (clone $dt)->setTime(0, 0)->getTimestamp();
-        $end_of_day = (clone $dt)-> setTime(23, 59, 59)->getTimestamp();
-
-        $query = $db->prepare("
-            SELECT *
-            FROM `{$db->prefix}tp_park_wait`
-            WHERE `last_update` BETWEEN %d AND %d
-                AND `park_id` = %s
-            ORDER BY `last_update`
-        ", $start_of_day, $end_of_day, $this->park->park_id);
-        $records = (array) $db->get_results($query, ARRAY_A);
-        foreach ($records as &$record) {
-            $record['extra_data'] = (array) json_decode($record['extra_data'], true);
-        }
-
-        if ($allow_cache) {
-            $this->wait_records = $records;
-        }
-
-        return $records;
-    }
-
-    public function get_opening_record() {
+    public function get_opening_record()
+    {
         if ($this->opening_record !== null) {
             return $this->opening_record;
         }

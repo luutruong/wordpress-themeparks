@@ -11,7 +11,8 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
     protected $parks_active = 0;
     protected $parks_inactive = 0;
 
-    public function __construct($args = array()){
+    public function __construct($args = array())
+    {
         parent::__construct([
             'screen' => self::TP_SCREEN_ID,
             'plural' => self::TP_PARK_PLURAL,
@@ -19,7 +20,8 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
         ]);
     }
 
-    public function get_columns() {
+    public function get_columns()
+    {
         return array(
             'cb' => '<input type="checkbox" />',
             'name' => __theme_parks_trans('Park'),
@@ -27,13 +29,15 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
         );
     }
 
-    protected function column_cb($item) {
+    protected function column_cb($item)
+    {
         return '<input type="checkbox" name="checked[]"'
             . ' value="' . esc_attr($item->park_id) . '"'
             . ' id="checkbox_park_' . esc_attr($item->park_id) . '" />';
     }
 
-    protected function column_default($item, $column_name) {
+    protected function column_default($item, $column_name)
+    {
         if ($column_name === 'description') {
             $desc_html =
                 '<div class="plugin-description"><p>' . esc_html(sprintf(
@@ -78,19 +82,24 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
         }));
         $this->parks_inactive = $this->parks_total - $this->parks_active;
 
+        $items = array_filter($items, [$this, '_search_callback']);
+
         $filter_status = sanitize_text_field($_GET['status'] ?? '');
         if ($filter_status === 'active') {
-            $this->items = array_filter($items, function ($item) {
+            $items = array_filter($items, function ($item) {
                 return $item->active > 0;
             });
         } elseif ($filter_status === 'inactive') {
-            $this->items = array_filter($items, function ($item) {
+            $items = array_filter($items, function ($item) {
                 return $item->active <= 0;
             });
         }
+
+        $this->items = $items;
     }
 
-    protected function get_views() {
+    protected function get_views()
+    {
         $menu_slug = plugin_basename(TP_THEMEPARKS__PLUGIN_DIR . 'admin/parks.php');
 
         $status_links = [];
@@ -137,5 +146,36 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
         }
 
         return $actions;
+    }
+
+    public function search_box($text, $input_id)
+    {
+        $input_id = $input_id . '-search-input';
+
+        return '
+            <p class="search-box">
+                <label class="screen-reader-text" for="' . esc_attr($input_id) . '">' . esc_html($text) . ':</label>
+                <input type="search" id="' . esc_attr($input_id) . '"
+                    class="wp-filter-search" name="s"
+                    value="' . esc_attr(wp_unslash($_GET['s'] ?? '')) . '"
+                    style="width:280px"
+                    placeholder="' . esc_attr('Search parks...') . '" />
+                ' . get_submit_button($text, 'hide-if-js', '', false, ['id' => 'search-submit']) . '
+            </p>
+        ';
+    }
+
+    public function _search_callback($park)
+    {
+        $search_text = sanitize_text_field($_GET['s'] ?? '');
+        if (empty($search_text)) {
+            return true;
+        }
+
+        if (preg_match('#(' . preg_quote($search_text, '#') . ')#iu', $park->name)) {
+            return true;
+        }
+
+        return false;
     }
 }

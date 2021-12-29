@@ -90,6 +90,12 @@
 
     <?php $__tp_parks_table->views(); ?>
 
+    <form class="search-form search-plugins" method="get">
+        <input type="hidden" name="page" value="<?php echo esc_attr($__tp_menu_slug); ?>" />
+        <input type="hidden" name="status" value="all" />
+        <?php echo $__tp_parks_table->search_box(__theme_parks_trans( 'Search Parks' ), 'plugin' ); ?>
+    </form>
+
     <form method="post" id="bulk-action-form">
         <?php $__tp_parks_table->display();  ?>
     </form>
