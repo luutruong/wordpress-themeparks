@@ -41,7 +41,8 @@ class TP_ThemeParks_Cron
     protected static function sync_wait_times(TP_ThemeParks_Api $api, $park)
     {
         $db = TP_ThemeParks::db();
-        $wait_times = $api->get_wait_times($park->park_id);
+        $extra_data = json_decode($park->extra_data, true);
+        $wait_times = $api->get_wait_times($extra_data['id']);
         if (empty($wait_times)) {
             return;
         }
@@ -112,8 +113,10 @@ class TP_ThemeParks_Cron
         return static::get_attraction_id($info);
     }
 
-    protected static function sync_opening_times($api, $park) {
-        $opening_times = $api->get_opening_times($park->park_id);
+    protected static function sync_opening_times($api, $park)
+    {
+        $extra_data = json_decode($park->extra_data, true);
+        $opening_times = $api->get_opening_times($extra_data['id']);
         if (empty($opening_times)) {
             return;
         }

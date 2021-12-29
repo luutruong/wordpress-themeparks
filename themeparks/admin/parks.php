@@ -4,19 +4,26 @@
     require_once TP_THEMEPARKS__PLUGIN_DIR . 'class.themeparks-api.php';
     require_once TP_THEMEPARKS__PLUGIN_DIR . 'class.themeparks.php';
 
+    if (!current_user_can('manage_options')) {
+        wp_die('You do not have permissions to view this page.');
+        exit;
+    }
+
     $__tp_parks_table = new TP_ThemeParks_Parks_List_Table();
     $__tp_api_url = get_option('tp_themeparks_api_url');
 
     $__tp_menu_slug = plugin_basename(TP_THEMEPARKS__PLUGIN_DIR . 'admin/parks.php');
     $__tp_sync_url = admin_url('admin.php?page=' . urlencode($__tp_menu_slug) . '&sync=1');
+    $__can_sync = count(TP_ThemeParks::get_parks()) === 0;
 
-    if (isset($_GET['sync']) && $_GET['sync'] === '1') {
+    if (isset($_GET['sync']) && $_GET['sync'] === '1' && $__can_sync) {
         if (empty($__tp_api_url)) {
             die(__theme_parks_trans('You may enter themeparks API url.'));
         }
 
         $__tp_api = new TP_ThemeParks_Api($__tp_api_url);
-        TP_ThemeParks::insert_parks($__tp_api->get_parks());
+        $__total = TP_ThemeParks::insert_parks($__tp_api->get_parks());
+        $__can_sync = $__total === 0;
     }
 
     $__tp_park_item_toggle = function () use ($__tp_menu_slug) {
@@ -83,8 +90,10 @@
 
 <div class="wrap">
     <h1 class="wp-heading-inline"><?php echo esc_html( get_admin_page_title() ); ?></h1>
+    <?php if($__can_sync): ?>
     <a href="<?php echo esc_url($__tp_sync_url); ?>"
        class="page-title-action"><?php echo esc_html_x('Sync', 'themeparks'); ?></a>
+    <?php endif; ?>
 
     <hr class="wp-header-end">
 

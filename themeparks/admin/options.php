@@ -2,6 +2,11 @@
 
 require_once TP_THEMEPARKS__PLUGIN_DIR . 'class.themeparks.php';
 
+if (!current_user_can('manage_options')) {
+    wp_die('You do not have permissions to view this page.');
+    exit;
+}
+
 $__parks_route = TP_ThemeParks::option_get_parks_route();
 if ($__parks_route === false) {
     // not exists
