@@ -41,8 +41,7 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
         if ($column_name === 'description') {
             $desc_html =
                 '<div class="plugin-description"><p>' . esc_html(sprintf(
-                    'Location: %s, Time zone: %s',
-                    $this->column_default($item, 'location'),
+                    'Time zone: %s',
                     $this->column_default($item, 'timezone')
                 )) . '</p></div>';
             $desc_html .= '<div class="inactive second plugin-version-author-uri">

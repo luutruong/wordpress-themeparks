@@ -280,7 +280,6 @@ class TP_ThemeParks {
         foreach ($parks as $park) {
             $park_data = [
                 'name' => $park['name'],
-                'location' => $park['location'],
                 'latitude' => $park['latitude'],
                 'longitude' => $park['longitude'],
                 'timezone' => $park['timeZone'],
@@ -337,7 +336,6 @@ class TP_ThemeParks {
                     `park_id` INT UNSIGNED AUTO_INCREMENT,
                     `name` VARCHAR(100) NOT NULL,
                     `slug` VARCHAR(100) DEFAULT NULL,
-                    `location` VARCHAR(50) NOT NULL,
                     `latitude` VARCHAR(25) NOT NULL,
                     `longitude` VARCHAR(25) NOT NULL,
                     `timezone` VARCHAR(32) NOT NULL,
