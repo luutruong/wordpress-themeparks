@@ -47,9 +47,10 @@ class TP_ThemeParks {
     {
         $db = self::db();
 
-        $db->query("DROP TABLE IF EXISTS `{$db->prefix}`tp_parks");
-        $db->query("DROP TABLE IF EXISTS `{$db->prefix}`tp_park_opening");
-        $db->query("DROP TABLE IF EXISTS `{$db->prefix}`tp_park_wait");
+        $db->query("DROP TABLE IF EXISTS `{$db->prefix}tp_parks`");
+        $db->query("DROP TABLE IF EXISTS `{$db->prefix}tp_park_opening`");
+        $db->query("DROP TABLE IF EXISTS `{$db->prefix}tp_park_wait`");
+        $db->query("DROP TABLE IF EXISTS `{$db->prefix}tp_park_attraction`");
 
         delete_option('tp_themeparks_api_url');
         delete_option('tp_themeparks_park_route');
