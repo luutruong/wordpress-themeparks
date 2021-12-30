@@ -147,7 +147,9 @@ class TP_ThemeParks {
     public static function filter_pre_handle_404($is_404)
     {
         $pageName = get_query_var('page' . 'name');
-        if ($pageName === self::PAGE_NAME_PARKS) {
+        if ($pageName === self::PAGE_NAME_PARKS
+            || $pageName === self::PAGE_NAME_ATTRACTIONS
+        ) {
             // prevent return 404 status in our pages.
             return true;
         }

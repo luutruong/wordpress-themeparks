@@ -6,11 +6,13 @@ require_once TP_THEMEPARKS__PLUGIN_DIR . 'includes/class-park.php';
 $__tp_attraction_id = (int) get_query_var(TP_ThemeParks::QUERY_VAR_ATTRACTION_ID);
 $__tp_attraction = TP_ThemeParks::get_attraction($__tp_attraction_id);
 
-add_filter('document_title_parts', function ($parts) use ($__tp_attraction) {
-    $parts['title'] = esc_html($__tp_attraction['name']);
+if (!empty($__tp_attraction)) {
+    add_filter('document_title_parts', function ($parts) use ($__tp_attraction) {
+        $parts['title'] = esc_html($__tp_attraction['name']);
 
-    return $parts;
-});
+        return $parts;
+    });
+}
 
 add_action('wp_head', function () {
     echo "<script type=\"text/javascript\" src=\"https://www.gstatic.com/charts/loader.js\"></script>";
