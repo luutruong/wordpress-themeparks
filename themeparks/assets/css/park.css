@@ -109,3 +109,10 @@
 .tp-park--attraction {
     text-decoration: none;
 }
+
+@media only screen and (max-width: 400px) {
+    .tp-parks-columns .tp-parks--item {
+        flex: 0 0 100%;
+        min-width: 100%;
+    }
+}
