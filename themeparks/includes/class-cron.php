@@ -113,7 +113,7 @@ class TP_ThemeParks_Cron
         return static::get_attraction_id($info);
     }
 
-    protected static function sync_opening_times($api, $park)
+    protected static function sync_opening_times(TP_ThemeParks_Api $api, $park)
     {
         $extra_data = json_decode($park->extra_data, true);
         $opening_times = $api->get_opening_times($extra_data['id']);

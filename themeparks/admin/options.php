@@ -32,6 +32,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
                     <td>
                         <input name="api_url" type="url" id="apiurl"
                                value="<?php echo esc_attr(TP_ThemeParks::option_get_api_url()) ?>" class="regular-text" />
+                        <p class="description" id="api_url-description">
+                            You can put multiple api URLs here by separate them by comma (,)
+                        </p>
                     </td>
                 </tr>
                 <tr>

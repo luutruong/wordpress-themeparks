@@ -242,7 +242,7 @@ class TP_ThemeParks_Park {
         $info = [];
 
         foreach ($records as $record) {
-            $time = TP_ThemeParks::date_time($record->created_date, get_option('time_format'));
+            $time = TP_ThemeParks::date_time($record->created_date, 'g:00 A');
             if (!isset($info[$time])) {
                 $info[$time] = [
                     $time,
