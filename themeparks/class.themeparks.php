@@ -27,6 +27,8 @@ class TP_ThemeParks {
         add_filter('cron_schedules', [__CLASS__, 'filter_cron_schedules']);
         add_filter('pre_handle_404', [__CLASS__, 'filter_pre_handle_404']);
 
+        static::load_resources();
+
         $timestamp = wp_next_scheduled(self::CRON_HOOK_NAME);
         if (!$timestamp) {
             $result = wp_schedule_event(time(), self::CRON_RECURRENCE, self::CRON_HOOK_NAME, [], true);
@@ -65,6 +67,18 @@ class TP_ThemeParks {
     {
         require_once TP_THEMEPARKS__PLUGIN_DIR . 'includes/class-cron.php';
         TP_ThemeParks_Cron::run_every_five_minutes();
+    }
+
+    public static function load_resources()
+    {
+        $path = $_SERVER['REQUEST_URI'];
+        if (stripos($path, '/' . self::option_get_parks_route()) === false) {
+            return;
+        }
+
+        $version = substr(md5_file(TP_THEMEPARKS__PLUGIN_DIR . 'assets/css/park.css'), 0, 6);
+        wp_register_style('theme' . 'parks.css', plugin_dir_url(__FILE__) . 'assets/css/park.css', [], $version);
+        wp_enqueue_style('theme' . 'parks.css');
     }
 
     public static function action_admin_menu()

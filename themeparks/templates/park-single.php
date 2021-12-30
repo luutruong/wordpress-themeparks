@@ -23,55 +23,6 @@ add_filter('document_title_parts', function ($parts) use ($__park) {
 
 add_action('wp_head', function () {
    echo "<script type=\"text/javascript\" src=\"https://www.gstatic.com/charts/loader.js\"></script>";
-   echo "<style>
-.park-hours {
-    display: inline-block;
-    padding: .35em .65em;
-    font-size: .75em;
-    font-weight: 700;
-    line-height: 1;
-    color: #fff;
-    text-align: center;
-    white-space: nowrap;
-    vertical-align: baseline;
-    border-radius: .25rem;
-    background-color: rgb(13,110,253);
-}
-.breadcrumb {
-    display: flex;
-    flex-wrap: wrap;
-    padding: 0;
-    margin: 0;
-    list-style: none;
-}
-.breadcrumb-item+.breadcrumb-item::before {
-    float: left;
-    padding-right: .5rem;
-    color: #6c757d;
-    content: \"/\";
-}
-.breadcrumb-item+.breadcrumb-item {
-    padding-left: .5rem;
-}
-.breadcrumb-item.active {
-    color: #6c757d;
-}
-.site-content .content-area {
-    width: 100%;
-    box-sizing: border-box;
-}
-.list-inline {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-.list-inline li {
-    display: inline;
-}
-.list--bullet li + li:before {
-    content: \"\\00B7\\20\";
-}
-   </style>";
 });
 
 get_header();

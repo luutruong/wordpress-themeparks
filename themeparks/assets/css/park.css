@@ -1,0 +1,104 @@
+.tp-parks-columns {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-left: -10px;
+    margin-right: -10px;
+}
+
+.tp-parkItem--image {
+    height: 160px;
+    margin-bottom: 10px;
+}
+.tp-parkItem--image a {
+    background-color: #f0f0f0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+}
+.tp-parks-columns .tp-parks--item {
+    flex: 0 0 50%;
+    min-width: 50%;
+    padding: 10px;
+    box-sizing: border-box;
+}
+.tp-parks--item .tp-parkItem--inner {
+    padding: 10px;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    height: 100%;
+}
+
+.tp-parks--item .tp-parkItem--title {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-bottom: 0;
+    flex: 1;
+}
+.tp-parks--item .tp-parkItem--title a {
+    color: #000;
+    text-decoration: none;
+}
+.tp-parks--item .tp-parkItem--header {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    flex: 1;
+}
+.tp-parks--item .tp-parkItem--meta {
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.park-hours {
+    display: inline-block;
+    padding: .35em .65em;
+    font-size: .75em;
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: .25rem;
+    background-color: rgb(13,110,253);
+}
+.breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+.breadcrumb-item+.breadcrumb-item::before {
+    float: left;
+    padding-right: .5rem;
+    color: #6c757d;
+    content: "/";
+}
+.breadcrumb-item+.breadcrumb-item {
+    padding-left: .5rem;
+}
+.breadcrumb-item.active {
+    color: #6c757d;
+}
+.site-content .content-area {
+    width: 100% !important;
+    box-sizing: border-box;
+}
+.list-inline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.list-inline li {
+    display: inline;
+}
+.list--bullet li + li:before {
+    content: \"\\00B7\\20\";
+}

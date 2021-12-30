@@ -20,15 +20,31 @@ get_header();
                         <?php echo esc_html(__theme_parks_trans('Wait Times for All Parks')); ?>
                     </h1>
                 </header>
-                <div class="entry-content">
-                    <ul style="margin-top:0;margin-bottom:0">
+                <div class="entry-content" style="margin-top: 0">
+                    <div class="tp-parks tp-parks-columns">
                         <?php foreach (TP_ThemeParks::get_parks(true) as $__park): ?>
-                            <li>
-                                <a href="<?php echo esc_url(TP_ThemeParks::get_park_item_url($__park)); ?>"
-                                   class="themeparks-park--item"><?php echo esc_html($__park->name); ?></a>
-                            </li>
+                            <div class="tp-parks--item">
+                                <div class="tp-parkItem--inner">
+                                    <div class="tp-parkItem--image">
+                                        <a href="<?php echo esc_url(TP_ThemeParks::get_park_item_url($__park)); ?>"
+                                           title="<?php echo esc_attr($__park->name); ?>"></a>
+                                    </div>
+                                    <header class="tp-parkItem--header">
+                                        <h4 class="tp-parkItem--title">
+                                            <a href="<?php echo esc_url(TP_ThemeParks::get_park_item_url($__park)); ?>"
+                                               title="<?php echo esc_attr($__park->name); ?>">
+                                                <?php echo esc_html($__park->name); ?>
+                                            </a>
+                                        </h4>
+                                        <div class="tp-parkItem--meta">
+                                            <span><?php echo esc_html(__theme_parks_trans('Last updated')); ?></span>
+                                            <span><?php echo esc_html(wp_date(get_option('links_updated_date_format')), $__park->last_sync_date); ?></span>
+                                        </div>
+                                    </header>
+                                </div>
+                            </div>
                         <?php endforeach; ?>
-                    </ul>
+                    </div>
                 </div>
             </div>
         </article>
