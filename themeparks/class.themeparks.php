@@ -24,6 +24,12 @@ class TP_ThemeParks {
             add_action('admin_menu', [__CLASS__, 'action_admin_menu']);
         }
 
+        add_action('check_admin_referer', [__CLASS__, 'action_check_admin_referer']);
+        add_action('_admin_menu', function () {
+           global $_registered_pages;
+           $_registered_pages['admin_page_themeparks/admin/park_edit'] = true;
+        });
+
         add_filter('cron_schedules', [__CLASS__, 'filter_cron_schedules']);
         add_filter('pre_handle_404', [__CLASS__, 'filter_pre_handle_404']);
 
@@ -79,6 +85,15 @@ class TP_ThemeParks {
         $version = substr(md5_file(TP_THEMEPARKS__PLUGIN_DIR . 'assets/css/park.css'), 0, 6);
         wp_register_style('theme' . 'parks.css', plugin_dir_url(__FILE__) . 'assets/css/park.css', [], $version);
         wp_enqueue_style('theme' . 'parks.css');
+    }
+
+    public static function action_check_admin_referer($action)
+    {
+        if ($action === 'bulk-tp-themeparks-parks') {
+            return true;
+        }
+
+        return false;
     }
 
     public static function action_admin_menu()
@@ -356,6 +371,7 @@ class TP_ThemeParks {
                     `active` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0',
                     `last_sync_date` INT UNSIGNED NOT NULL DEFAULT '0',
                     `extra_data` TEXT NOT NULL,
+                    `image_url` VARCHAR(255) NOT NULL DEFAULT '',
                     PRIMARY KEY `park_id` (`park_id`),
                     UNIQUE KEY `slug` (`slug`),
                     KEY `active` (`active`)
@@ -432,6 +448,10 @@ class TP_ThemeParks {
                     KEY `park_id_type` (`park_id`, `attraction_type`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci;
             ");
+        }
+
+        if (!$db->query("SHOW COLUMNS FROM `{$db->prefix}tp_parks` LIKE 'image_url'")) {
+            $db->query("ALTER TABLE `{$db->prefix}tp_parks` ADD COLUMN `image_url` VARCHAR(255) NOT NULL DEFAULT ''");
         }
     }
 

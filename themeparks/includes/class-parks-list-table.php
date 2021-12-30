@@ -38,6 +38,8 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
 
     protected function column_default($item, $column_name)
     {
+        $menu_slug = plugin_basename(TP_THEMEPARKS__PLUGIN_DIR . 'admin/parks.php');
+
         if ($column_name === 'description') {
             $desc_html =
                 '<div class="plugin-description"><p>' . esc_html(sprintf(
@@ -45,19 +47,21 @@ class TP_ThemeParks_Parks_List_Table extends WP_List_Table {
                     $this->column_default($item, 'timezone')
                 )) . '</p></div>';
             $desc_html .= '<div class="inactive second plugin-version-author-uri">
+                <a href="' . esc_url(admin_url('admin.php?' . http_build_query([
+                    'page' => plugin_basename(TP_THEMEPARKS__PLUGIN_DIR . 'admin/park_edit.php'),
+                    'park_id' => $item->park_id,
+                ]))) . '">' . esc_html(__theme_parks_trans('Edit')) .  '</a>
                 <a href="' . esc_url(TP_ThemeParks::get_park_item_url($item)) . '" target="_blank">' . esc_html(__theme_parks_trans('View park')) . '</a>
             </div>';
 
             return $desc_html;
         } elseif ($column_name === 'name') {
             $name_html = '<strong>' . esc_html($item->name) . '</strong>';
-            $menu_slug = plugin_basename(TP_THEMEPARKS__PLUGIN_DIR . 'admin/parks.php');
             $link_url = admin_url('admin.php?' . http_build_query([
                 'page' => $menu_slug,
                 'action' => $item->active ? 'deactivate' : 'activate',
-                'nonce' => wp_create_nonce('tp_themeparks_park_toggle'),
                 'park_id' => $item->park_id,
-            ], '', '&'));
+            ]));
 
             $name_html .= '<div class="row-actions visible">
                 <span class="' . ($item->active ? 'activate' : 'deactivate')  . '">

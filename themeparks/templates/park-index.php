@@ -27,6 +27,7 @@ get_header();
                                 <div class="tp-parkItem--inner">
                                     <div class="tp-parkItem--image">
                                         <a href="<?php echo esc_url(TP_ThemeParks::get_park_item_url($__park)); ?>"
+                                           style="background-image:url(<?php echo esc_url($__park->image_url); ?>)"
                                            title="<?php echo esc_attr($__park->name); ?>"></a>
                                     </div>
                                     <header class="tp-parkItem--header">
@@ -38,7 +39,7 @@ get_header();
                                         </h4>
                                         <div class="tp-parkItem--meta">
                                             <span><?php echo esc_html(__theme_parks_trans('Last updated')); ?></span>
-                                            <span><?php echo esc_html(wp_date(get_option('links_updated_date_format')), $__park->last_sync_date); ?></span>
+                                            <span><?php echo esc_html(wp_date(get_option('links_updated_date_format'), $__park->last_sync_date)); ?></span>
                                         </div>
                                     </header>
                                 </div>

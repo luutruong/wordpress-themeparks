@@ -28,12 +28,7 @@
 
     $__tp_park_item_toggle = function () use ($__tp_menu_slug) {
         $action = $_GET['action'] ?? '';
-        $nonce = $_GET['nonce'] ?? '';
         $park_id = sanitize_text_field($_GET['park_id'] ?? '');
-
-        if (!wp_verify_nonce($nonce, 'tp_themeparks_park_toggle')) {
-            return null;
-        }
 
         if (!in_array($action, ['activate', 'deactivate'], true)
             || empty($park_id)
