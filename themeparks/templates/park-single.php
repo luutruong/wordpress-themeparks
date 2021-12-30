@@ -4,18 +4,17 @@ require_once TP_THEMEPARKS__PLUGIN_DIR . 'class.themeparks.php';
 require_once TP_THEMEPARKS__PLUGIN_DIR . 'class.themeparks-api.php';
 require_once TP_THEMEPARKS__PLUGIN_DIR . 'includes/class-park.php';
 
-ob_start();
-$__slug = get_query_var(TP_ThemeParks::QUERY_VAR_PARK_SLUG);
+$__tp_slug = get_query_var(TP_ThemeParks::QUERY_VAR_PARK_SLUG);
 
-$__park = TP_ThemeParks::get_park_by_slug($__slug);
-if (empty($__park) || empty($__park->active)) {
+$__tp_park = TP_ThemeParks::get_park_by_slug($__tp_slug);
+if (empty($__tp_park) || empty($__tp_park->active)) {
     return;
 }
 
-add_filter('document_title_parts', function ($parts) use ($__park) {
+add_filter('document_title_parts', function ($parts) use ($__tp_park) {
     $parts['title'] = sprintf('%s %s',
         esc_html(__theme_parks_trans('Wait Times at')),
-        esc_html($__park->name)
+        esc_html($__tp_park->name)
     );
 
     return $parts;
@@ -27,12 +26,11 @@ add_action('wp_head', function () {
 
 get_header();
 
-$__api_url = TP_ThemeParks::option_get_api_url();
-$__park_info = new TP_ThemeParks_Park($__park);
+$__park_info = new TP_ThemeParks_Park($__tp_park);
 
 ?>
 
-<div <?php generate_do_attr( 'content' ); ?>>
+<div <?php generate_do_attr('content'); ?>>
     <main <?php generate_do_attr( 'main' ); ?>>
         <article id="post-0" class="post-0 post type-post status-publish format-standard hentry category-uncategorized entry">
             <div class="inside-article">
@@ -42,7 +40,7 @@ $__park_info = new TP_ThemeParks_Park($__park);
                         <li class="breadcrumb-item">
                             <a href="<?php echo esc_url(TP_ThemeParks::get_park_list_url()); ?>"><?php echo esc_html(__theme_parks_trans('All Parks')); ?></a>
                         </li>
-                        <li class="breadcrumb-item active" aria-current="page"><?php echo esc_html($__park->name); ?></li>
+                        <li class="breadcrumb-item active" aria-current="page"><?php echo esc_html($__tp_park->name); ?></li>
                     </ol>
                 </nav>
 
@@ -50,7 +48,7 @@ $__park_info = new TP_ThemeParks_Park($__park);
                     <h1 class="entry-title">
                         <?php echo sprintf('%s %s',
                             esc_html(__theme_parks_trans('Wait Times at')),
-                            esc_html($__park->name)
+                            esc_html($__tp_park->name)
                         ); ?>
                     </h1>
                 </header>
@@ -122,7 +120,8 @@ $__park_info = new TP_ThemeParks_Park($__park);
                                     <?php foreach($__insight['data']['attractions'] as $__attraction): ?>
                                         <li>
                                             <ul class="list-inline list--bullet">
-                                                <li><?php echo esc_html($__attraction['name']); ?></li>
+                                                <li><a href="<?php echo esc_url($__attraction['view_url']); ?>"
+                                                       class="tp-park--attraction"><?php echo esc_html($__attraction['name']); ?></a></li>
                                                 <li><small><?php echo esc_html(sprintf('%s: %s %s',
                                                         __theme_parks_trans('Average wait time'),
                                                         $__attraction['avg_wait_time'],
@@ -136,55 +135,45 @@ $__park_info = new TP_ThemeParks_Park($__park);
                         <?php endforeach; ?>
                     </ul>
 
-                    <h3><strong><?php echo esc_html(__theme_parks_trans('Attractions with Wait Times')); ?></strong></h3>
-                    <ul>
-                        <?php foreach($__park_info->get_attractions_operating() as $__attraction): ?>
-                            <li>
-                                <ul class="list-inline list--bullet">
-                                    <li><?php echo esc_html($__attraction['name']); ?></li>
+                    <?php foreach($__park_info->get_attractions_overview() as $__item): ?>
+                        <?php if(!empty($__item['attractions'])): ?>
+                        <h3><strong><?php echo esc_html($__item['title']); ?></strong></h3>
+                        <ul>
+                            <?php if(isset($__item['with_wait_times'])): ?>
+                                <?php foreach($__item['attractions'] as $__attraction): ?>
                                     <li>
-                                        <small>
-                                            <?php if($__attraction['avg_wait_time'] > 0): ?>
-                                                <?php echo esc_html(sprintf(
-                                                    '%s: %s %s',
-                                                    __theme_parks_trans('Average wait time'),
-                                                    $__attraction['avg_wait_time'],
-                                                    __theme_parks_trans('minutes')
-                                                )); ?>
-                                            <?php else: ?>
-                                                <?php echo esc_html(sprintf('%s: %s', __theme_parks_trans('Status'), $__attraction['status'])); ?>
-                                            <?php endif; ?>
-                                        </small>
+                                        <ul class="list-inline list--bullet">
+                                            <li><a href="<?php echo esc_url($__attraction['view_url']); ?>"
+                                                   class="tp-park--attraction"><?php echo esc_html($__attraction['name']); ?></a></li>
+                                            <li>
+                                                <small>
+                                                    <?php if($__attraction['avg_wait_time'] > 0): ?>
+                                                        <?php echo esc_html(sprintf(
+                                                            '%s: %s %s',
+                                                            __theme_parks_trans('Average wait time'),
+                                                            $__attraction['avg_wait_time'],
+                                                            __theme_parks_trans('minutes')
+                                                        )); ?>
+                                                    <?php else: ?>
+                                                        <?php echo esc_html(sprintf('%s: %s', __theme_parks_trans('Status'), $__attraction['status'])); ?>
+                                                    <?php endif; ?>
+                                                </small>
+                                            </li>
+                                        </ul>
                                     </li>
-                                </ul>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-
-                    <h3><strong><?php echo esc_html(__theme_parks_trans('Attractions Closed')); ?></strong></h3>
-                    <ul>
-                        <?php foreach($__park_info->get_attractions_closed() as $__attraction): ?>
-                            <li><?php echo esc_html($__attraction['name']); ?></li>
-                        <?php endforeach; ?>
-                    </ul>
-
-                    <?php if($__park_info->get_attractions_refurbishment()): ?>
-                    <h3><strong><?php echo esc_html(__theme_parks_trans('Attractions Refurbishment')); ?></strong></h3>
-                    <ul>
-                        <?php foreach($__park_info->get_attractions_refurbishment() as $__attraction): ?>
-                            <li><?php echo esc_html($__attraction['name']); ?></li>
-                        <?php endforeach; ?>
-                    </ul>
-                    <?php endif; ?>
-
-                    <?php if($__park_info->get_attractions_not_reporting()): ?>
-                    <h3><strong><?php echo esc_html(__theme_parks_trans('Attractions Not Reporting')); ?></strong></h3>
-                    <ul>
-                        <?php foreach($__park_info->get_attractions_not_reporting() as $__attraction): ?>
-                            <li><?php echo esc_html($__attraction['name']); ?></li>
-                        <?php endforeach; ?>
-                    </ul>
-                    <?php endif; ?>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <?php foreach($__item['attractions'] as $__attraction): ?>
+                                    <li data-type="<?php echo esc_attr($__attraction['attraction_type']); ?>"
+                                        data-id="<?php echo esc_attr($__attraction['attraction_id']); ?>">
+                                        <a href="<?php echo esc_url($__attraction['view_url']); ?>"
+                                           class="tp-park--attraction"><?php echo esc_html($__attraction['name']); ?></a>
+                                    </li>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </ul>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </article>

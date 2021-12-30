@@ -40,6 +40,45 @@ class TP_ThemeParks_Park {
         $this->opening_record = null;
     }
 
+    public function get_attraction_view_params(array $attraction)
+    {
+        $start_of_day = (clone $this->date_dt)->setTime(0, 0)->getTimestamp();
+        $end_of_day = (clone $this->date_dt)->setTime(23, 59, 59)->getTimestamp();
+
+        $db = TP_ThemeParks::db();
+        $records = $db->get_results($db->prepare("
+            SELECT *
+            FROM `{$db->prefix}tp_park_wait`
+            WHERE `park_id` = %s AND `created_date` BETWEEN %d AND %d
+                AND `attraction_id` = %d
+                AND `status` = %s
+            ORDER BY `created_date`
+        ", $this->park->park_id, $start_of_day, $end_of_day, $attraction['attraction_id'] , 'operating'));
+        $info = [];
+
+        foreach ($records as $record) {
+            $time = TP_ThemeParks::date_time($record->created_date, 'g:00 A');
+            if (!isset($info[$time])) {
+                $info[$time] = [
+                    $time,
+                    []
+                ];
+            }
+            $info[$time][1][] = (int) $record->wait_time;
+        }
+
+        $data = [];
+        foreach ($info as $pair) {
+            list($time, $wait_times) = $pair;
+
+            $data[] = [$time, ceil(array_sum($wait_times) / count($wait_times))];
+        }
+
+        return [
+            'chart_data' => $data,
+        ];
+    }
+
     public function get_total_attractions()
     {
         return count($this->get_attractions());
@@ -55,22 +94,50 @@ class TP_ThemeParks_Park {
         $results = $db->get_results($db->prepare("
             SELECT *
             FROM `{$db->prefix}tp_park_attraction`
-            WHERE `park_id` = %s
+            WHERE `park_id` = %s AND `attraction_type` = %s
             ORDER BY `name`
-        ", $this->park->park_id), ARRAY_A);
+        ", $this->park->park_id, 'attraction'), ARRAY_A);
         $attractions = [];
         foreach ($results as $result) {
-            $attractions[$result['attraction_id']] = $result;
+            $attractions[$result['attraction_id']] = array_merge($result, [
+                'view_url' => TP_ThemeParks::get_attraction_view_url($result),
+            ]);
         }
         $this->attractions = $attractions;
 
         return $this->attractions;
     }
 
+    public function get_attractions_overview()
+    {
+        return [
+            [
+                'title' => __theme_parks_trans('Attractions with Wait Times'),
+                'attractions' => $this->get_attractions_operating(),
+                'with_wait_times' => true,
+            ],
+            [
+                'title' => __theme_parks_trans('Attractions Closed'),
+                'attractions' => $this->get_attractions_closed()
+            ],
+            [
+                'title' => __theme_parks_trans('Attractions Refurbishment'),
+                'attractions' => $this->get_attractions_refurbishment(),
+            ],
+            [
+                'title' => __theme_parks_trans('Attractions Not Reporting'),
+                'attractions' => $this->get_attractions_not_reporting()
+            ]
+        ];
+    }
+
     public function get_attractions_operating()
     {
         $start_of_day = (clone $this->date_dt)->setTime(0, 0)->getTimestamp();
         $end_of_day = (clone $this->date_dt)->setTime(23, 59, 59)->getTimestamp();
+
+        $attractions = $this->get_attractions();
+        $attraction_ids = array_keys($attractions);
 
         $db = TP_ThemeParks::db();
         $query = $db->prepare("
@@ -81,11 +148,19 @@ class TP_ThemeParks_Park {
                     AND `status` = %s
                 GROUP BY `attraction_id`
                 ORDER BY `avg_wait_time`
-            ", $this->park->park_id, $start_of_day, $end_of_day, 'operating');
-        $attractions = $this->get_attractions();
+            ",
+            $this->park->park_id,
+            $start_of_day,
+            $end_of_day,
+            'operating'
+        );
 
         $results = [];
         foreach ($db->get_results($query) as $record) {
+            if (!isset($attractions[$record->attraction_id])) {
+                continue;
+            }
+
             $results[$record->attraction_id] = array_replace($attractions[$record->attraction_id], [
                 'avg_wait_time' => ceil($record->avg_wait_time)
             ]);
@@ -202,6 +277,10 @@ class TP_ThemeParks_Park {
         $all_attractions = $this->get_attractions();
         $attractions = [];
         foreach ($results as $result) {
+            if (!isset($all_attractions[$result['attraction_id']])) {
+                continue;
+            }
+
             if ($result['avg_wait_time'] == $lowest_wait_time) {
                 $attractions[$result['attraction_id']] = array_replace($all_attractions[$result['attraction_id']], [
                     'avg_wait_time' => ceil($result['avg_wait_time'])

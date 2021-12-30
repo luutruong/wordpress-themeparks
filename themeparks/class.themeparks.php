@@ -2,7 +2,9 @@
 
 class TP_ThemeParks {
     const QUERY_VAR_PARK_SLUG = '__park_slug';
+    const QUERY_VAR_ATTRACTION_ID = '__attraction_id';
     const PAGE_NAME_PARKS = '__parks';
+    const PAGE_NAME_ATTRACTIONS = '__attractions';
 
     const CRON_HOOK_NAME = 'tp_themeparks_cron';
     const CRON_RECURRENCE = 'tp_themeparks_five_minutes';
@@ -173,6 +175,11 @@ class TP_ThemeParks {
             }
 
             return TP_THEMEPARKS__PLUGIN_DIR . 'templates/park-index.php';
+        } elseif ($pageName === self::PAGE_NAME_ATTRACTIONS) {
+            $attractionId = (int) get_query_var(self::QUERY_VAR_ATTRACTION_ID);
+            if ($attractionId > 0) {
+                return TP_THEMEPARKS__PLUGIN_DIR . 'templates/attraction.php';
+            }
         }
 
         return $template;
@@ -181,16 +188,23 @@ class TP_ThemeParks {
     public static function filter_query_vars($query_vars)
     {
         $query_vars[] = self::QUERY_VAR_PARK_SLUG;
+        $query_vars[] = self::QUERY_VAR_ATTRACTION_ID;
 
         return $query_vars;
     }
 
     public static function rewrites_init(): void
     {
-        $route_name = self::option_get_parks_route();
+        $route_name = preg_quote(self::option_get_parks_route());
+
         add_rewrite_rule(
             '^(' . $route_name . ')(\/)?([0-9a-zA-Z\-]+)?\/?$',
             'index.php?page' . 'name=' . self::PAGE_NAME_PARKS . '&' . self::QUERY_VAR_PARK_SLUG . '=$matches[3]',
+            'top'
+        );
+        add_rewrite_rule(
+            '^(' . $route_name . ')\/attractions\/([0-9]+)\/?$',
+            'index.php?page' . 'name=' . self::PAGE_NAME_ATTRACTIONS . '&' . self::QUERY_VAR_ATTRACTION_ID . '=$matches[2]',
             'top'
         );
 
@@ -216,7 +230,28 @@ class TP_ThemeParks {
     }
     public static function get_park_item_url($park)
     {
-        return site_url(self::option_get_parks_route() . '/' . urlencode($park->slug) . '/');
+        if (is_array($park)) {
+            $slug = $park['slug'];
+        } elseif (is_object($park)) {
+            $slug = $park->slug;
+        } else {
+            throw new \InvalidArgumentException('Invalid argument.');
+        }
+
+        return site_url(self::option_get_parks_route() . '/' . urlencode($slug) . '/');
+    }
+
+    public static function get_attraction_view_url($attraction)
+    {
+        if (is_array($attraction)) {
+            $attraction_id = $attraction['attraction_id'];
+        } elseif (is_object($attraction)) {
+            $attraction_id = $attraction->attraction_id;
+        } else {
+            throw new \InvalidArgumentException('Invalid argument.');
+        }
+
+        return site_url(self::option_get_parks_route() . '/attractions/' . $attraction_id . '/');
     }
 
     /** OPTIONS */
@@ -300,6 +335,23 @@ class TP_ThemeParks {
         ", $park_id);
 
         return $db->get_row($query);
+    }
+
+    public static function get_attraction(int $attraction_id)
+    {
+        $db = self::db();
+        $attraction = $db->get_row($db->prepare("
+            SELECT *
+            FROM `{$db->prefix}tp_park_attraction`
+            WHERE `attraction_id` = %d
+        ", $attraction_id), ARRAY_A);
+        if (empty($attraction)) {
+            return null;
+        }
+
+        $attraction['park'] = self::get_park($attraction['park_id']);
+
+        return $attraction;
     }
 
     public static function insert_parks(array $parks)
