@@ -328,7 +328,7 @@ class TP_ThemeParks_Park {
         $db = TP_ThemeParks::db();
         if ($groupType === 'daily') {
             $query = $db->prepare("
-                SELECT FROM_UNIXTIME(`created_date`, '%s') as `_date`, AVG(`wait_time`) AS `_avg_wait_time`
+                SELECT FROM_UNIXTIME(`created_date`, '{mysql_date_format}') as `_date`, AVG(`wait_time`) AS `_avg_wait_time`
                 FROM `{$db->prefix}tp_park_wait`
                 WHERE `park_id` = %s
                     AND `created_date` BETWEEN %d AND %d
@@ -337,12 +337,12 @@ class TP_ThemeParks_Park {
                 GROUP BY `_date`
                 ORDER BY `_date`
             ",
-                    '%Y-%m-%d',
                     $this->park->park_id,
                     $start_of_day,
                     $end_of_day,
                     'operating'
                 );
+            $query = str_replace('{mysql_date_format}', '%Y-%m-%d', $query);
         } else {
            $query = $db->prepare("
                 SELECT *
