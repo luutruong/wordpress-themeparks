@@ -87,6 +87,10 @@ class TP_ThemeParks {
         $version = substr(md5_file(TP_THEMEPARKS__PLUGIN_DIR . 'assets/css/park.css'), 0, 6);
         wp_register_style('theme' . 'parks.css', plugin_dir_url(__FILE__) . 'assets/css/park.css', [], $version);
         wp_enqueue_style('theme' . 'parks.css');
+
+        $js_version = substr(md5_file(TP_THEMEPARKS__PLUGIN_DIR . 'assets/js/app.js'), 0, 6);
+        wp_register_script('theme' . 'park.js', plugin_dir_url(__FILE__) . 'assets/js/app.js', [], $js_version);
+        wp_enqueue_script('theme' . 'park.js');
     }
 
     public static function action_check_admin_referer($action)

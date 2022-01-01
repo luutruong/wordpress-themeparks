@@ -27,6 +27,12 @@ add_action('wp_head', function () {
 get_header();
 
 $__park_info = new TP_ThemeParks_Park($__tp_park);
+$__tp_dt = clone $__park_info->get_date_dt();
+
+$__tp_yesterday_range = [
+    (clone $__tp_dt)->modify('-1 day')->setTime(0, 0)->getTimestamp(),
+    (clone $__tp_dt)->modify('-1 day')->setTime(23, 59, 59)->getTimestamp()
+];
 
 ?>
 
@@ -63,48 +69,19 @@ $__park_info = new TP_ThemeParks_Park($__tp_park);
                             '<strong>' . esc_html(__theme_parks_trans('Park Status')) . '</strong>',
                             $__park_info->get_status()); ?></p>
 
-                    <div id="park-wait--times--chart" data-wait="<?php echo esc_attr(json_encode($__park_info->get_wait_data_chart())); ?>"
+                    <h3><?php echo esc_html(__theme_parks_trans('Wait Times Today')); ?></h3>
+                    <div class="js-chart-element" data-wait="<?php echo esc_attr(json_encode($__park_info->get_wait_data_chart())); ?>"
+                         data-wait-date="<?php echo esc_attr($__park_info->get_wait_date()); ?>"
+                         data-haxis-title="<?php echo esc_attr(__theme_parks_trans('Time of Day')); ?>"
                          style="width: 100%;height: 500px"></div>
-                    <script type="text/javascript">
-                        google.charts.load('current', {packages: ['corechart', 'bar']});
-                        google.charts.setOnLoadCallback(__drawBasic);
-                        var chart_element = document.getElementById('park-wait--times--chart');
-                        function __drawBasic() {
-                            var data = new google.visualization.DataTable();
-                            data.addColumn('string', 'X');
-                            data.addColumn('number', '<?php echo esc_js(__theme_parks_trans('Minutes')); ?>');
-                            data.addRows(JSON.parse(chart_element.getAttribute('data-wait')));
 
-                            var options = {
-                                hAxis: {
-                                    title: '<?php echo esc_js(__theme_parks_trans('Time of Day')); ?>',
-                                    viewWindow: {
-                                        min: [7, 30, 0],
-                                        max: [17, 30, 0]
-                                    }
-                                },
-                                vAxis: {
-                                    title: '<?php echo esc_js(__theme_parks_trans('Wait Time (minutes)')); ?>'
-                                },
-                                legend: {position: 'none'},
-                                theme: {
-                                    chartArea: {width: '80%', height: '70%'}
-                                },
-                                annotations: {
-                                    alwaysOutside: true,
-                                    textStyle: {
-                                        fontSize: 14,
-                                        color: '#000',
-                                        auraColor: 'none'
-                                    }
-                                },
-                                title: '<?php echo esc_js(sprintf('%s %s', __theme_parks_trans('Data for'), $__park_info->get_wait_date())); ?>'
-                            };
-
-                            var chart = new google.visualization.ColumnChart(chart_element);
-                            chart.draw(data, options);
-                        }
-                    </script>
+                    <h3><?php echo esc_html(__theme_parks_trans('Wait Times Yesterday')); ?></h3>
+                    <div class="js-chart-element" data-wait="<?php echo esc_attr(json_encode($__park_info->get_wait_data_chart([
+                            'date_range' => $__tp_yesterday_range
+                    ]))); ?>"
+                         data-wait-date="<?php echo esc_attr(TP_ThemeParks::date_time($__tp_yesterday_range[0], get_option('date_format'))); ?>"
+                         data-haxis-title="<?php echo esc_attr(__theme_parks_trans('Time of Day')); ?>"
+                         style="width: 100%;height: 500px"></div>
 
                     <h3><strong><?php echo esc_html(__theme_parks_trans('Park Insights')); ?></strong></h3>
                     <ul>
