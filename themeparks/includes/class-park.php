@@ -53,47 +53,21 @@ class TP_ThemeParks_Park {
         $start_of_day = (clone $this->date_dt)->setTime(0, 0)->getTimestamp();
         $end_of_day = (clone $this->date_dt)->setTime(23, 59, 59)->getTimestamp();
 
-        $db = TP_ThemeParks::db();
-
         // chart data in 7 days
         $chart_data_7_days = [
             'start_date' => TP_ThemeParks::date_time($start_of_day - 7 * 86400, get_option('date_format')),
             'start_date_timestamp' => $start_of_day - 7 * 86400,
             'end_date' => TP_ThemeParks::date_time($end_of_day, get_option('date_format')),
             'end_date_timestamp' => $end_of_day,
-            'data' => [],
+            'data' => $this->get_wait_data_chart([
+                'attraction_id' => $attraction['attraction_id'],
+                'date_range' => [
+                    $start_of_day - 7 * 86400,
+                    $end_of_day
+                ],
+                'group_by' => 'daily'
+            ]),
         ];
-        $records_7_days = $db->get_results($db->prepare("
-            SELECT FROM_UNIXTIME(`created_date`, '%s') as `_date`, AVG(`wait_time`) AS `_avg_wait_time`
-            FROM `{$db->prefix}tp_park_wait`
-            WHERE `park_id` = %s
-                AND `created_date` BETWEEN %d AND %d
-                AND `attraction_id` = %d
-                AND `status` = %s
-            GROUP BY `_date`
-            ORDER BY `_date`
-        ",
-            '%Y-%m-%d',
-            $this->park->park_id,
-            $chart_data_7_days['start_date_timestamp'],
-            $chart_data_7_days['end_date_timestamp'],
-            $attraction['attraction_id'],
-            'operating'
-        ), ARRAY_A);
-        $records_7_days_pairs = [];
-        foreach ($records_7_days as $records_7_day) {
-            $records_7_days_pairs[$records_7_day['_date']] = floatval($records_7_day['_avg_wait_time']);
-        }
-        $chart_data_7_days_start = $chart_data_7_days['start_date_timestamp'];
-        while ($chart_data_7_days_start <= $chart_data_7_days['end_date_timestamp']) {
-            $_date = TP_ThemeParks::date_time($chart_data_7_days_start, 'Y-m-d');
-            $chart_data_7_days['data'][] = [
-                TP_ThemeParks::date_time($chart_data_7_days_start, get_option('date_format')),
-                $records_7_days_pairs[$_date] ?? 0.0
-            ];
-
-            $chart_data_7_days_start += 86400;
-        }
 
         return [
             'chart_data' => $this->get_wait_data_chart([
@@ -349,33 +323,73 @@ class TP_ThemeParks_Park {
             $whereClause = sprintf('AND `attraction_id` = %d', intval($options['attraction_id']));
         }
 
-        $db = TP_ThemeParks::db();
-        $records = $db->get_results($db->prepare("
-            SELECT *
-            FROM `{$db->prefix}tp_park_wait`
-            WHERE `park_id` = %s AND `created_date` BETWEEN %d AND %d
-                AND `status` = %s
-                %s
-            ORDER BY `created_date`
-        ", $this->park->park_id, $start_of_day, $end_of_day, 'operating', $whereClause));
-        $info = [];
+        $groupType = $options['group_by'] ?? null;
 
-        foreach ($records as $record) {
-            $time = TP_ThemeParks::date_time($record->created_date, 'g:00 A');
-            if (!isset($info[$time])) {
-                $info[$time] = [
-                    $time,
-                    []
-                ];
-            }
-            $info[$time][1][] = (int) $record->wait_time;
+        $db = TP_ThemeParks::db();
+        if ($groupType === 'daily') {
+            $query = $db->prepare("
+                SELECT FROM_UNIXTIME(`created_date`, '%s') as `_date`, AVG(`wait_time`) AS `_avg_wait_time`
+                FROM `{$db->prefix}tp_park_wait`
+                WHERE `park_id` = %s
+                    AND `created_date` BETWEEN %d AND %d
+                    AND `status` = %s
+                    {$whereClause}
+                GROUP BY `_date`
+                ORDER BY `_date`
+            ",
+                    '%Y-%m-%d',
+                    $this->park->park_id,
+                    $start_of_day,
+                    $end_of_day,
+                    'operating'
+                );
+        } else {
+           $query = $db->prepare("
+                SELECT *
+                FROM `{$db->prefix}tp_park_wait`
+                WHERE `park_id` = %s AND `created_date` BETWEEN %d AND %d
+                    AND `status` = %s
+                    {$whereClause}
+                ORDER BY `created_date`
+            ", $this->park->park_id, $start_of_day, $end_of_day, 'operating');
         }
 
+        $records = $db->get_results($query, ARRAY_A);
         $data = [];
-        foreach ($info as $pair) {
-            list($time, $wait_times) = $pair;
 
-            $data[] = [$time, ceil(array_sum($wait_times) / count($wait_times))];
+        if ($groupType === 'daily') {
+            $date_pairs = [];
+            foreach ($records as $record) {
+                $date_pairs[$record['_date']] = ceil(floatval($record['_avg_wait_time']));
+            }
+            $start_date = $start_of_day;
+            while ($start_date <= $end_of_day) {
+                $_date = TP_ThemeParks::date_time($start_date, 'Y-m-d');
+                $data[] = [
+                    TP_ThemeParks::date_time($start_date, get_option('date_format')),
+                    $date_pairs[$_date] ?? 0
+                ];
+
+                $start_date += 86400;
+            }
+        } else {
+            $info = [];
+            foreach ($records as $record) {
+                $time = TP_ThemeParks::date_time($record['created_date'], 'g:00 A');
+                if (!isset($info[$time])) {
+                    $info[$time] = [
+                        $time,
+                        []
+                    ];
+                }
+                $info[$time][1][] = (int) $record['wait_time'];
+            }
+
+            foreach ($info as $pair) {
+                list($time, $wait_times) = $pair;
+
+                $data[] = [$time, ceil(array_sum($wait_times) / count($wait_times))];
+            }
         }
 
         return $data;
