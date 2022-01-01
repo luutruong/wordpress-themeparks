@@ -69,16 +69,21 @@ class TP_ThemeParks_Park {
             ]),
         ];
 
+        $prev_day = (clone $this->date_dt)->modify('-1 day');
+
         return [
             'chart_data' => $this->get_wait_data_chart([
                 'date_range' => [$start_of_day, $end_of_day],
                 'attraction_id' => $attraction['attraction_id']
             ]),
             'chart_data_yesterday' => $this->get_wait_data_chart([
-                'date_range' => [$start_of_day - 7 * 86400, $end_of_day - 7 * 86400],
+                'date_range' => [
+                    (clone $prev_day)->setTime(0, 0)->getTimestamp(),
+                    (clone $prev_day)->setTime(23, 59, 59)->getTimestamp()
+                ],
                 'attraction_id' => $attraction['attraction_id']
             ]),
-            'chart_data_yesterday_date' => TP_ThemeParks::date_time($start_of_day - 86400, get_option('date_format')),
+            'chart_data_yesterday_date' => TP_ThemeParks::date_time($prev_day->getTimestamp(), get_option('date_format')),
             'chart_data_7_days' => $chart_data_7_days,
         ];
     }
