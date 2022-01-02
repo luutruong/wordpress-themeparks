@@ -40,54 +40,6 @@ class TP_ThemeParks_Park {
         $this->opening_record = null;
     }
 
-    /**
-     * @return DateTime
-     */
-    public function get_date_dt(): DateTime
-    {
-        return $this->date_dt;
-    }
-
-    public function get_attraction_view_params(array $attraction)
-    {
-        $start_of_day = (clone $this->date_dt)->setTime(0, 0)->getTimestamp();
-        $end_of_day = (clone $this->date_dt)->setTime(23, 59, 59)->getTimestamp();
-
-        // chart data in 7 days
-        $chart_data_7_days = [
-            'start_date' => TP_ThemeParks::date_time($start_of_day - 7 * 86400, get_option('date_format')),
-            'start_date_timestamp' => $start_of_day - 7 * 86400,
-            'end_date' => TP_ThemeParks::date_time($end_of_day, get_option('date_format')),
-            'end_date_timestamp' => $end_of_day,
-            'data' => $this->get_wait_data_chart([
-                'attraction_id' => $attraction['attraction_id'],
-                'date_range' => [
-                    $start_of_day - 7 * 86400,
-                    $end_of_day
-                ],
-                'group_by' => 'daily'
-            ]),
-        ];
-
-        $prev_day = (clone $this->date_dt)->modify('-1 day');
-
-        return [
-            'chart_data' => $this->get_wait_data_chart([
-                'date_range' => [$start_of_day, $end_of_day],
-                'attraction_id' => $attraction['attraction_id']
-            ]),
-            'chart_data_yesterday' => $this->get_wait_data_chart([
-                'date_range' => [
-                    (clone $prev_day)->setTime(0, 0)->getTimestamp(),
-                    (clone $prev_day)->setTime(23, 59, 59)->getTimestamp()
-                ],
-                'attraction_id' => $attraction['attraction_id']
-            ]),
-            'chart_data_yesterday_date' => TP_ThemeParks::date_time($prev_day->getTimestamp(), get_option('date_format')),
-            'chart_data_7_days' => $chart_data_7_days,
-        ];
-    }
-
     public function get_total_attractions()
     {
         return count($this->get_attractions());
@@ -203,11 +155,6 @@ class TP_ThemeParks_Park {
         });
     }
 
-    public function get_wait_date()
-    {
-        return $this->date_dt->format(get_option('date_format'));
-    }
-
     public function get_park_insights()
     {
         return [
@@ -314,6 +261,62 @@ class TP_ThemeParks_Park {
         ];
     }
 
+    public function get_wait_data_charts(array $attraction = [])
+    {
+        $data = [];
+
+        $segments = [
+            [
+                'sub_days' => 0,
+                'title' => __theme_parks_trans('Wait Times Today'),
+                'data' => [],
+                'vaxis-title' => __theme_parks_trans('Wait Time (minutes)'),
+            ],
+            [
+                'sub_days' => 1,
+                'title' => __theme_parks_trans('Wait Times Yesterday'),
+                'data' => [],
+                'vaxis-title' => __theme_parks_trans('Wait Time (minutes)'),
+            ],
+            [
+                'sub_days' => 7,
+                'title' => __theme_parks_trans('Wait Times Last 7 Days'),
+                'data' => [],
+                'vaxis-title' => __theme_parks_trans('Wait Time (minutes)'),
+            ],
+            [
+                'sub_days' => 30,
+                'title' => __theme_parks_trans('Wait Times Last 30 Days'),
+                'data' => [],
+                'vaxis-title' => __theme_parks_trans('Wait Time (minutes)'),
+            ]
+        ];
+        $date_format = get_option('date_format');
+        foreach ($segments as $segment) {
+            $suffix = $segment['sub_days'] > 1 ? 'days' : 'day';
+            $start_date = (clone $this->date_dt)
+                ->modify('-' . $segment['sub_days'] . ' ' . $suffix)
+                ->setTime(0, 0)
+                ->getTimestamp();
+            $end_date = (clone $this->date_dt)->setTime(23, 59, 59)->getTimestamp();
+
+            $data[] = [
+                'title' => $segment['title'],
+                'data' => $this->get_wait_data_chart([
+                    'attraction_id' => $attraction['attraction_id'] ?? null,
+                    'date_range' => [$start_date, $end_date],
+                    'group_by' => $segment['sub_days'] > 1 ? 'daily' : 'hourly'
+                ]),
+                'date' => $segment['sub_days'] > 1
+                    ? sprintf('%s - %s', TP_ThemeParks::date_time($start_date, $date_format), TP_ThemeParks::date_time($end_date, $date_format))
+                    : TP_ThemeParks::date_time($start_date, $date_format),
+                'vaxis-title' => $segment['vaxis-title']
+            ];
+        }
+
+        return $data;
+    }
+
     public function get_wait_data_chart(array $options = [])
     {
         if (isset($options['date_range'])) {
@@ -324,7 +327,7 @@ class TP_ThemeParks_Park {
         }
 
         $whereClause = '';
-        if (isset($options['attraction_id'])) {
+        if (!empty($options['attraction_id'])) {
             $whereClause = sprintf('AND `attraction_id` = %d', intval($options['attraction_id']));
         }
 
@@ -342,11 +345,11 @@ class TP_ThemeParks_Park {
                 GROUP BY `_date`
                 ORDER BY `_date`
             ",
-                    $this->park->park_id,
-                    $start_of_day,
-                    $end_of_day,
-                    'operating'
-                );
+                $this->park->park_id,
+                $start_of_day,
+                $end_of_day,
+                'operating'
+            );
             $query = str_replace('{mysql_date_format}', '%Y-%m-%d', $query);
         } else {
            $query = $db->prepare("

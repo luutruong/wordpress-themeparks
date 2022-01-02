@@ -26,13 +26,7 @@ add_action('wp_head', function () {
 
 get_header();
 
-$__park_info = new TP_ThemeParks_Park($__tp_park);
-$__tp_dt = clone $__park_info->get_date_dt();
-
-$__tp_yesterday_range = [
-    (clone $__tp_dt)->modify('-1 day')->setTime(0, 0)->getTimestamp(),
-    (clone $__tp_dt)->modify('-1 day')->setTime(23, 59, 59)->getTimestamp()
-];
+$__tp_park_info = new TP_ThemeParks_Park($__tp_park);
 
 ?>
 
@@ -61,36 +55,24 @@ $__tp_yesterday_range = [
                 <div class="entry-content">
                     <p style="margin:0"><?php echo sprintf('%s: %s %s %s',
                             '<strong>' . esc_html(__theme_parks_trans('Park Hours')) . '</strong>',
-                            $__park_info->get_open_time(),
+                            $__tp_park_info->get_open_time(),
                             esc_html(__theme_parks_trans('to')),
-                            $__park_info->get_close_time()
+                            $__tp_park_info->get_close_time()
                         ); ?></p>
                     <p style="margin:0"><?php echo sprintf('%s: %s',
                             '<strong>' . esc_html(__theme_parks_trans('Park Status')) . '</strong>',
-                            $__park_info->get_status()); ?></p>
+                            $__tp_park_info->get_status()); ?></p>
 
-                    <h3><?php echo esc_html(__theme_parks_trans('Wait Times Today')); ?></h3>
-                    <div class="js-chart-element" data-wait="<?php echo esc_attr(json_encode($__park_info->get_wait_data_chart())); ?>"
-                         data-wait-date="<?php echo esc_attr($__park_info->get_wait_date()); ?>"
-                         data-haxis-title="<?php echo esc_attr(__theme_parks_trans('Time of Day')); ?>"
-                         style="width: 100%;height: 500px"></div>
-
-                    <h3><?php echo esc_html(__theme_parks_trans('Wait Times Yesterday')); ?></h3>
-                    <div class="js-chart-element" data-wait="<?php echo esc_attr(json_encode($__park_info->get_wait_data_chart([
-                            'date_range' => $__tp_yesterday_range
-                    ]))); ?>"
-                         data-wait-date="<?php echo esc_attr(TP_ThemeParks::date_time($__tp_yesterday_range[0], get_option('date_format'))); ?>"
-                         data-haxis-title="<?php echo esc_attr(__theme_parks_trans('Time of Day')); ?>"
-                         style="width: 100%;height: 500px"></div>
+                    <?php require_once TP_THEMEPARKS__PLUGIN_DIR . 'templates/charts.php'; ?>
 
                     <h3><strong><?php echo esc_html(__theme_parks_trans('Park Insights')); ?></strong></h3>
                     <ul>
                         <li><?php echo sprintf(
                                 '<strong>%s</strong>: %d',
                                 __theme_parks_trans('Total Attractions'),
-                                $__park_info->get_total_attractions()
+                                $__tp_park_info->get_total_attractions()
                             ); ?></li>
-                        <?php foreach($__park_info->get_park_insights() as $__insight): ?>
+                        <?php foreach($__tp_park_info->get_park_insights() as $__insight): ?>
                             <li>
                                 <div><strong><?php echo sprintf('%s (%s)', esc_html($__insight['title']), esc_html($__insight['data']['date_range'])); ?></strong></div>
                                 <ul>
@@ -112,7 +94,7 @@ $__tp_yesterday_range = [
                         <?php endforeach; ?>
                     </ul>
 
-                    <?php foreach($__park_info->get_attractions_overview() as $__item): ?>
+                    <?php foreach($__tp_park_info->get_attractions_overview() as $__item): ?>
                         <?php if(!empty($__item['attractions'])): ?>
                         <h3><strong><?php echo esc_html($__item['title']); ?></strong></h3>
                         <ul>

@@ -26,7 +26,7 @@
                     }
                 },
                 vAxis: {
-                    title: 'Wait Time (minutes)',
+                    title: element.getAttribute('data-vaxis-title'),
                 },
                 legend: {position: 'none'},
                 theme: {
@@ -40,7 +40,7 @@
                         auraColor: 'none'
                     }
                 },
-                title: 'Data for ' + element.getAttribute('data-wait-date')
+                title: element.getAttribute('data-wait-date')
             };
 
             var chart = new google.visualization.ColumnChart(element);

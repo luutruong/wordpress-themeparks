@@ -25,7 +25,6 @@ if (empty($__tp_attraction)) {
 }
 
 $__tp_park_info = new TP_ThemeParks_Park($__tp_attraction['park']);
-$__tp_params = $__tp_park_info->get_attraction_view_params($__tp_attraction);
 
 ?>
 
@@ -55,26 +54,7 @@ $__tp_params = $__tp_park_info->get_attraction_view_params($__tp_attraction);
                 </header>
 
                 <div class="entry-content">
-                    <h3><?php echo esc_html(__theme_parks_trans('Wait Times Today')); ?></h3>
-                    <div class="js-chart-element"
-                         data-wait-date="<?php echo esc_attr($__tp_park_info->get_wait_date()); ?>"
-                         data-haxis-title="<?php echo esc_attr(__theme_parks_trans('Time of Day')); ?>"
-                         data-wait="<?php echo esc_attr(json_encode($__tp_params['chart_data'])); ?>"
-                         style="width: 100%;height: 500px"></div>
-
-                    <h3><?php echo esc_html(__theme_parks_trans('Wait Times Yesterday')); ?></h3>
-                    <div class="js-chart-element"
-                         data-wait-date="<?php echo esc_attr($__tp_params['chart_data_yesterday_date']); ?>"
-                         data-haxis-title="<?php echo esc_attr(__theme_parks_trans('Time of Day')); ?>"
-                         data-wait="<?php echo esc_attr(json_encode($__tp_params['chart_data_yesterday'])); ?>"
-                         style="width: 100%;height: 500px"></div>
-
-                    <h3><?php echo esc_html(__theme_parks_trans('Wait Times in 7 Days')); ?></h3>
-                    <div class="js-chart-element"
-                         data-wait-date="<?php echo esc_attr($__tp_params['chart_data_7_days']['start_date'] . ' - ' . $__tp_params['chart_data_7_days']['end_date']); ?>"
-                         data-haxis-title="<?php echo esc_attr(__theme_parks_trans('Day')); ?>"
-                         data-wait="<?php echo esc_attr(json_encode($__tp_params['chart_data_7_days']['data'])); ?>"
-                         style="width: 100%;height: 500px"></div>
+                    <?php require_once TP_THEMEPARKS__PLUGIN_DIR . 'templates/charts.php'; ?>
                 </div>
             </div>
         </article>
