@@ -300,19 +300,21 @@ class TP_ThemeParks_Park {
             if ($segment['sub_days'] > 0) {
                 $start_date->modify('-' . $segment['sub_days'] . ' ' . $suffix);
             }
-            $start_date = $start_date->getTimestamp();
-            $end_date = (clone $this->date_dt)->setTime(23, 59, 59)->getTimestamp();
+
+            $start_date_timestamp = $start_date->getTimestamp();
+            $end_date = (clone $this->date_dt)->setTime(23, 59, 59);
+            $end_date_timestamp = $end_date->getTimestamp();
 
             $data[] = [
                 'title' => $segment['title'],
                 'data' => $this->get_wait_data_chart([
                     'attraction_id' => $attraction['attraction_id'] ?? null,
-                    'date_range' => [$start_date, $end_date, wp_timezone()],
+                    'date_range' => [$start_date_timestamp, $end_date_timestamp, wp_timezone()],
                     'group_by' => $segment['sub_days'] > 1 ? 'daily' : 'hourly',
                 ]),
                 'date' => $segment['sub_days'] > 1
-                    ? sprintf('%s - %s', TP_ThemeParks::date_time($start_date, $date_format), TP_ThemeParks::date_time($end_date, $date_format))
-                    : TP_ThemeParks::date_time($start_date, $date_format),
+                    ? sprintf('%s - %s', $start_date->format($date_format), $end_date->format($date_format))
+                    : $start_date->format($date_format),
                 'vaxis-title' => $segment['vaxis-title']
             ];
         }
@@ -372,7 +374,8 @@ class TP_ThemeParks_Park {
         if ($groupType === 'daily') {
             $date_pairs = [];
             foreach ($records as $record) {
-                $date_pairs[$record['_date']] = ceil(floatval($record['_avg_wait_time']));
+                $date_pairs[TP_ThemeParks::date_time(strtotime($record['_date']), 'Y-m-d')] =
+                    ceil(floatval($record['_avg_wait_time']));
             }
             $start_date = $start_of_day;
             while ($start_date <= $end_of_day) {
