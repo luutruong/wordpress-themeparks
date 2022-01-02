@@ -304,8 +304,8 @@ class TP_ThemeParks_Park {
                 'title' => $segment['title'],
                 'data' => $this->get_wait_data_chart([
                     'attraction_id' => $attraction['attraction_id'] ?? null,
-                    'date_range' => [$start_date, $end_date],
-                    'group_by' => $segment['sub_days'] > 1 ? 'daily' : 'hourly'
+                    'date_range' => [$start_date, $end_date, wp_timezone()],
+                    'group_by' => $segment['sub_days'] > 1 ? 'daily' : 'hourly',
                 ]),
                 'date' => $segment['sub_days'] > 1
                     ? sprintf('%s - %s', TP_ThemeParks::date_time($start_date, $date_format), TP_ThemeParks::date_time($end_date, $date_format))
@@ -320,10 +320,11 @@ class TP_ThemeParks_Park {
     public function get_wait_data_chart(array $options = [])
     {
         if (isset($options['date_range'])) {
-            list($start_of_day, $end_of_day) = $options['date_range'];
+            list($start_of_day, $end_of_day, $time_zone) = $options['date_range'];
         } else {
             $start_of_day = (clone $this->date_dt)->setTime(0, 0)->getTimestamp();
             $end_of_day = (clone $this->date_dt)->setTime(23, 59, 59)->getTimestamp();
+            $time_zone = $this->date_dt->getTimezone();
         }
 
         $whereClause = '';
@@ -372,9 +373,10 @@ class TP_ThemeParks_Park {
             }
             $start_date = $start_of_day;
             while ($start_date <= $end_of_day) {
-                $_date = TP_ThemeParks::date_time($start_date, 'Y-m-d');
+                $_date_dt = new DateTime('@' . $start_date, $time_zone);
+                $_date = $_date_dt->format('Y-m-d');
                 $data[] = [
-                    TP_ThemeParks::date_time($start_date, get_option('date_format')),
+                    $_date_dt->format(get_option('date_format')),
                     $date_pairs[$_date] ?? 0
                 ];
 
