@@ -295,9 +295,12 @@ class TP_ThemeParks_Park {
         foreach ($segments as $segment) {
             $suffix = $segment['sub_days'] > 1 ? 'days' : 'day';
             $start_date = (clone $this->date_dt)
-                ->modify('-' . $segment['sub_days'] . ' ' . $suffix)
-                ->setTime(0, 0)
-                ->getTimestamp();
+                ->setTime(0, 0);
+
+            if ($segment['sub_days'] > 0) {
+                $start_date->modify('-' . $segment['sub_days'] . ' ' . $suffix);
+            }
+            $start_date = $start_date->getTimestamp();
             $end_date = (clone $this->date_dt)->setTime(23, 59, 59)->getTimestamp();
 
             $data[] = [
@@ -373,7 +376,9 @@ class TP_ThemeParks_Park {
             }
             $start_date = $start_of_day;
             while ($start_date <= $end_of_day) {
-                $_date_dt = new DateTime('@' . $start_date, $time_zone);
+                $_date_dt = new DateTime('@' . $start_date);
+                $_date_dt->setTimezone($time_zone);
+
                 $_date = $_date_dt->format('Y-m-d');
                 $data[] = [
                     $_date_dt->format(get_option('date_format')),
