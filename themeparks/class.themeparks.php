@@ -217,14 +217,25 @@ class TP_ThemeParks {
         flush_rewrite_rules();
     }
 
-    public static function date_time(int $timestamp, ?string $format = null)
+    public static function date_time($timestamp, ?string $format = null, ?DateTimeZone $time_zone = null)
     {
         if ($format === null || $format === 'absolute') {
             $format = get_option('date_format') . ' ' . get_option('time_format');
         }
+        if ($time_zone === null) {
+            $time_zone = new DateTimeZone('UTC');
+        }
 
-        $dt = new DateTime('@' . $timestamp, new DateTimeZone('UTC'));
-        $dt->setTimezone(wp_timezone());
+        if ($timestamp instanceof DateTime) {
+            $dt = clone $timestamp;
+        } else {
+            $dt = new DateTime('@' . $timestamp, $time_zone);
+        }
+
+        $wp_time_zone = wp_timezone();
+        if ($dt->getTimezone() !== $wp_time_zone) {
+            $dt->setTimezone(wp_timezone());
+        }
 
         return $dt->format($format);
     }

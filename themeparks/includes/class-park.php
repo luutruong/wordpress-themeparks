@@ -7,10 +7,7 @@ class TP_ThemeParks_Park {
      * @var stdClass
      */
     protected $park;
-    /**
-     * @var DateTime
-     */
-    protected $date_dt;
+
     /**
      * @var stdClass|null|false
      */
@@ -23,21 +20,6 @@ class TP_ThemeParks_Park {
     public function __construct($park)
     {
         $this->park = $park;
-        $this->setDate();
-    }
-
-    public function setDate(?string $date = null)
-    {
-        if ($date === null) {
-            $dt = new DateTime('now', wp_timezone());
-        } else {
-            $dt = DateTime::createFromFormat('Y-m-d', $date, wp_timezone());
-        }
-
-        $this->date_dt = $dt;
-
-        // reset cache
-        $this->opening_record = null;
     }
 
     public function get_total_attractions()
@@ -94,11 +76,11 @@ class TP_ThemeParks_Park {
 
     public function get_attractions_operating()
     {
-        $start_of_day = (clone $this->date_dt)->setTime(0, 0)->getTimestamp();
-        $end_of_day = (clone $this->date_dt)->setTime(23, 59, 59)->getTimestamp();
+        $now = new DateTime('now', wp_timezone());
+        $start_of_day = (clone $now)->setTime(0, 0)->getTimestamp();
+        $end_of_day = (clone $now)->setTime(23, 59, 59)->getTimestamp();
 
         $attractions = $this->get_attractions();
-        $attraction_ids = array_keys($attractions);
 
         $db = TP_ThemeParks::db();
         $query = $db->prepare("
@@ -179,7 +161,8 @@ class TP_ThemeParks_Park {
 
     protected function get_lowest_wait_time_attractions(string $type)
     {
-        $start_date = new DateTime('now', wp_timezone());
+        $start_date = new DateTime('now');
+        $start_date->setTimezone(wp_timezone());
         $end_date = clone $start_date;
 
         if ($type === 'today') {
@@ -292,24 +275,28 @@ class TP_ThemeParks_Park {
             ]
         ];
         $date_format = get_option('date_format');
+        $time_zone = wp_timezone();
         foreach ($segments as $segment) {
-            $suffix = $segment['sub_days'] > 1 ? 'days' : 'day';
-            $start_date = (clone $this->date_dt)
-                ->setTime(0, 0);
+            $start_date = new DateTime('now');
+            $start_date->setTimezone($time_zone);
+            $end_date = new DateTime('now');
+            $end_date->setTimezone($time_zone);
 
-            if ($segment['sub_days'] > 0) {
-                $start_date->modify('-' . $segment['sub_days'] . ' ' . $suffix);
+            $start_date->setTime(0, 0);
+            $end_date->setTime(23, 59, 59);
+
+            if ($segment['sub_days'] === 1) {
+                // yesterday.
+                $start_date->modify('-1 day');
+                $end_date->modify('-1 day');
+            } elseif ($segment['sub_days'] > 1) {
+                $start_date->modify('-' . $segment['sub_days'] . ' days');
             }
-
-            $start_date_timestamp = $start_date->getTimestamp();
-            $end_date = (clone $this->date_dt)->setTime(23, 59, 59);
-            $end_date_timestamp = $end_date->getTimestamp();
 
             $data[] = [
                 'title' => $segment['title'],
-                'data' => $this->get_wait_data_chart([
+                'data' => $this->get_wait_data_chart($start_date, $end_date, [
                     'attraction_id' => $attraction['attraction_id'] ?? null,
-                    'date_range' => [$start_date_timestamp, $end_date_timestamp, wp_timezone()],
                     'group_by' => $segment['sub_days'] > 1 ? 'daily' : 'hourly',
                 ]),
                 'date' => $segment['sub_days'] > 1
@@ -322,95 +309,90 @@ class TP_ThemeParks_Park {
         return $data;
     }
 
-    public function get_wait_data_chart(array $options = [])
+    public function get_wait_data_chart(DateTime $start_date, DateTime $end_date, array $options = [])
     {
-        if (isset($options['date_range'])) {
-            list($start_of_day, $end_of_day, $time_zone) = $options['date_range'];
-        } else {
-            $start_of_day = (clone $this->date_dt)->setTime(0, 0)->getTimestamp();
-            $end_of_day = (clone $this->date_dt)->setTime(23, 59, 59)->getTimestamp();
-            $time_zone = $this->date_dt->getTimezone();
-        }
-
         $whereClause = '';
         if (!empty($options['attraction_id'])) {
             $whereClause = sprintf('AND `attraction_id` = %d', intval($options['attraction_id']));
         }
 
-        $groupType = $options['group_by'] ?? null;
+        $groupType = $options['group_by'] ?? 'hourly';
 
         $db = TP_ThemeParks::db();
         if ($groupType === 'daily') {
             $query = $db->prepare("
-                SELECT FROM_UNIXTIME(`created_date`, '{mysql_date_format}') as `_date`, AVG(`wait_time`) AS `_avg_wait_time`
+                SELECT `created_date`, `wait_time`
                 FROM `{$db->prefix}tp_park_wait`
-                WHERE `park_id` = %s
+                WHERE `park_id` = %d
                     AND `created_date` BETWEEN %d AND %d
                     AND `status` = %s
                     {$whereClause}
-                GROUP BY `_date`
-                ORDER BY `_date`
+                ORDER BY `created_date`
             ",
                 $this->park->park_id,
-                $start_of_day,
-                $end_of_day,
+                $start_date->getTimestamp(),
+                $end_date->getTimestamp(),
                 'operating'
             );
             $query = str_replace('{mysql_date_format}', '%Y-%m-%d', $query);
         } else {
            $query = $db->prepare("
-                SELECT *
+                SELECT `created_date`, `wait_time`
                 FROM `{$db->prefix}tp_park_wait`
-                WHERE `park_id` = %s AND `created_date` BETWEEN %d AND %d
+                WHERE `park_id` = %d AND `created_date` BETWEEN %d AND %d
                     AND `status` = %s
                     {$whereClause}
                 ORDER BY `created_date`
-            ", $this->park->park_id, $start_of_day, $end_of_day, 'operating');
+            ", $this->park->park_id, $start_date->getTimestamp(), $end_date->getTimestamp(), 'operating');
         }
 
         $records = $db->get_results($query, ARRAY_A);
         $data = [];
 
-        if ($groupType === 'daily') {
-            $date_pairs = [];
-            foreach ($records as $record) {
-                $date_pairs[TP_ThemeParks::date_time(strtotime($record['_date']), 'Y-m-d')] =
-                    ceil(floatval($record['_avg_wait_time']));
-            }
-            $start_date = $start_of_day;
-            while ($start_date <= $end_of_day) {
-                $_date_dt = new DateTime('@' . $start_date);
-                $_date_dt->setTimezone($time_zone);
+        $grouped = $this->group_results($records, $groupType);
 
-                $_date = $_date_dt->format('Y-m-d');
+        if ($groupType === 'daily') {
+            $_start = clone $start_date;
+            while ($_start->getTimestamp() <= $end_date->getTimestamp()) {
+                $_date = TP_ThemeParks::date_time($_start, 'Y-m-d');
+                if (isset($grouped[$_date])) {
+                    $wait_times = floor(array_sum($grouped[$_date][1]) / count($grouped[$_date][1]));
+                } else {
+                    $wait_times = 0;
+                }
+
                 $data[] = [
-                    $_date_dt->format(get_option('date_format')),
-                    $date_pairs[$_date] ?? 0
+                    TP_ThemeParks::date_time($_start, get_option('date_format')),
+                    $wait_times
                 ];
 
-                $start_date += 86400;
+                $_start->modify('+1 day');
             }
         } else {
-            $info = [];
-            foreach ($records as $record) {
-                $time = TP_ThemeParks::date_time($record['created_date'], 'g:00 A');
-                if (!isset($info[$time])) {
-                    $info[$time] = [
-                        $time,
-                        []
-                    ];
-                }
-                $info[$time][1][] = (int) $record['wait_time'];
-            }
-
-            foreach ($info as $pair) {
+            foreach ($grouped as $pair) {
                 list($time, $wait_times) = $pair;
 
-                $data[] = [$time, ceil(array_sum($wait_times) / count($wait_times))];
+                $data[] = [$time, floor(array_sum($wait_times) / count($wait_times))];
             }
         }
 
         return $data;
+    }
+
+    protected function group_results(array $results, string $groupType)
+    {
+        $grouped = [];
+
+        foreach ($results as $result) {
+            $time = TP_ThemeParks::date_time($result['created_date'], $groupType === 'daily' ? 'Y-m-d' : 'g:00 A');
+            if (!isset($grouped[$time])) {
+                $grouped[$time] = [$time, []];
+            }
+
+            $grouped[$time][1][] = (int) $result['wait_time'];
+        }
+
+        return $grouped;
     }
 
     public function get_open_time()
@@ -449,12 +431,15 @@ class TP_ThemeParks_Park {
             return $this->opening_record;
         }
 
+        $dt = new DateTime('now');
+        $dt->setTimezone(wp_timezone());
+
         $db = TP_ThemeParks::db();
         $query = $db->prepare("
             SELECT *
             FROM `{$db->prefix}tp_park_opening`
             WHERE `park_id` = %s AND `open_date` = %s
-        ", $this->park->park_id, $this->date_dt->format('Y-m-d'));
+        ", $this->park->park_id, $dt->format('Y-m-d'));
 
         $record = $db->get_row($query);
         $this->opening_record = is_object($record) ? $record : false;
