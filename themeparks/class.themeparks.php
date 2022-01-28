@@ -75,6 +75,13 @@ class TP_ThemeParks {
     {
         require_once TP_THEMEPARKS__PLUGIN_DIR . 'includes/class-cron.php';
         TP_ThemeParks_Cron::run_every_five_minutes();
+
+        // clean up junk records
+        $db = self::db();
+        $sql = $db->prepare('
+            DELETE FROM `wp_tp_park_wait` WHERE `status` = \'\'
+        ');
+        $rows = $db->query($sql);
     }
 
     public static function load_resources()
