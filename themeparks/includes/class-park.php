@@ -247,6 +247,7 @@ class TP_ThemeParks_Park {
     public function get_wait_data_charts(array $attraction = [])
     {
         $data = [];
+        $start = microtime(true);
 
         $segments = [
             [
@@ -305,6 +306,9 @@ class TP_ThemeParks_Park {
                 'vaxis-title' => $segment['vaxis-title']
             ];
         }
+
+        $timeElapsed = microtime(true) - $start;
+        TP_ThemeParks::log('get_wait_data_charts time elapsed: ' . $timeElapsed . ' seconds');
 
         return $data;
     }

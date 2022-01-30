@@ -71,6 +71,45 @@ class TP_ThemeParks {
         }
     }
 
+    public static function log(string $message): void
+    {
+        $ymd = date('Ymd');
+        $logPath = TP_THEMEPARKS__PLUGIN_DIR . '/log-' . $ymd . '.log';
+        $fp = fopen($logPath, 'a+');
+
+        $logTime = date('Y-m-d H:i:s');
+        fwrite($fp, "[$logTime] {$message}" . PHP_EOL);
+        fclose($fp);
+    }
+
+    public static function getLogFiles(): array
+    {
+        $files = [];
+
+        foreach (glob(TP_THEMEPARKS__PLUGIN_DIR . 'log-*.log') as $path) {
+            $name = basename($path);
+            preg_match('/^log-(\d+)\.log$/', $name, $matches);
+            $date = intval($matches[1]);
+
+            $files[] = [
+                'name' => $name,
+                'path' => $path,
+                'view_url' => admin_url('admin.php?' . http_build_query([
+                    'page' => 'themeparks/admin/logs.php',
+                    'file' => $name,
+                    'noheader' => 1,
+                ])),
+                'date' => $date,
+            ];
+        }
+
+        uasort($files, function ($a, $b) {
+            return $b['date'] - $a['date'];
+        });
+
+        return $files;
+    }
+
     public static function cron_run()
     {
         require_once TP_THEMEPARKS__PLUGIN_DIR . 'includes/class-cron.php';
@@ -81,7 +120,14 @@ class TP_ThemeParks {
         $sql = $db->prepare('
             DELETE FROM `wp_tp_park_wait` WHERE `status` = \'\'
         ');
-        $rows = $db->query($sql);
+        $db->query($sql);
+
+        // remove old logs
+        $logFiles = self::getLogFiles();
+        while (count($logFiles) > 3) {
+            $logFile = array_pop($logFiles);
+            @unlink($logFile['path']);
+        }
     }
 
     public static function load_resources()
@@ -121,6 +167,7 @@ class TP_ThemeParks {
             9999
         );
 
+        // sub menu.
         add_submenu_page(
             TP_THEMEPARKS__PLUGIN_DIR . 'admin/parks.php',
             'All Parks',
@@ -137,6 +184,15 @@ class TP_ThemeParks {
             'Options',
             'manage_options',
             TP_THEMEPARKS__PLUGIN_DIR . 'admin/options.php',
+            null,
+            9999
+        );
+        add_submenu_page(
+            TP_THEMEPARKS__PLUGIN_DIR . 'admin/parks.php',
+            'Logs',
+            'Logs',
+            'manage_options',
+            TP_THEMEPARKS__PLUGIN_DIR . 'admin/logs.php',
             null,
             9999
         );

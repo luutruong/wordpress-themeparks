@@ -42,18 +42,19 @@ class TP_ThemeParks_Api {
             $formData = null;
             if ($method === 'POST' || $method === 'PUT') {
                 $formData = http_build_query($params, '', '&');
-            } else {
+            } elseif (count($params) > 0) {
                 $url .= '?' . http_build_query($params, '', '&');
             }
 
             $ch = curl_init($url);
+            $start = microtime(true);
 
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3.0);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 3.0);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5.0);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10.0);
 
             if ($formData !== null) {
                 curl_setopt($ch, CURLOPT_POSTFIELDS, $formData);
@@ -64,7 +65,16 @@ class TP_ThemeParks_Api {
             }
 
             $response = curl_exec($ch);
+            $curlInfo = curl_getinfo($ch);
             curl_close($ch);
+
+            $timeElapsed = microtime(true) - $start;
+            TP_ThemeParks::log(sprintf(
+                'Api request $url=%s $timeElapsed=%f $responseCode=%d',
+                $url,
+                $timeElapsed,
+                $curlInfo['http_code']
+            ));
 
             $json = json_decode($response, true);
             if (empty($json)) {

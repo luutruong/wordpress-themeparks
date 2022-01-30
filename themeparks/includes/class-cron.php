@@ -40,9 +40,12 @@ class TP_ThemeParks_Cron
 
     protected static function sync_wait_times(TP_ThemeParks_Api $api, $park)
     {
+        TP_ThemeParks::log('<---- sync_wait_times(' . $park->park_id . ') ---->');
+        $start = microtime(true);
         $db = TP_ThemeParks::db();
         $extra_data = json_decode($park->extra_data, true);
         $wait_times = $api->get_wait_times($extra_data['id']);
+        TP_ThemeParks::log('Total ' . count($wait_times) . ' records');
         if (empty($wait_times)) {
             return;
         }
@@ -89,6 +92,10 @@ class TP_ThemeParks_Cron
                 'created_date' => time()
             ]);
         }
+
+        $timeElapsed = microtime(true) - $start;
+        TP_ThemeParks::log('Time elapsed: ' . $timeElapsed . ' seconds');
+        TP_ThemeParks::log('<---- END ---->');
     }
 
     protected static function get_attraction_id(array $info)
