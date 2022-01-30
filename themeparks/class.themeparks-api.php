@@ -66,6 +66,8 @@ class TP_ThemeParks_Api {
 
             $response = curl_exec($ch);
             $curlInfo = curl_getinfo($ch);
+            $errCode = curl_errno($ch);
+            $err = curl_error($ch);
             curl_close($ch);
 
             $timeElapsed = microtime(true) - $start;
@@ -75,6 +77,13 @@ class TP_ThemeParks_Api {
                 $timeElapsed,
                 $curlInfo['http_code']
             ));
+            if (empty($curlInfo['http_code'])) {
+                TP_ThemeParks::log(sprintf(
+                    '  -> CURL Error $errCode=%d $err=%s',
+                    $errCode,
+                    $err
+                ));
+            }
 
             $json = json_decode($response, true);
             if (empty($json)) {
