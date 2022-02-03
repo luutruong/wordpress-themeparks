@@ -71,14 +71,19 @@ class TP_ThemeParks {
         }
     }
 
-    public static function log(string $message): void
+    public static function log(string $message, bool $timestamp = true): void
     {
         $ymd = date('Ymd');
         $logPath = TP_THEMEPARKS__PLUGIN_DIR . '/log-' . $ymd . '.log';
         $fp = fopen($logPath, 'a+');
 
-        $logTime = date('Y-m-d H:i:s');
-        fwrite($fp, "[$logTime] {$message}" . PHP_EOL);
+        if ($timestamp) {
+            $logTime = date('Y-m-d H:i:s');
+            fwrite($fp, "[$logTime] {$message}" . PHP_EOL);
+        } else {
+            fwrite($fp, $message . PHP_EOL);
+        }
+
         fclose($fp);
     }
 

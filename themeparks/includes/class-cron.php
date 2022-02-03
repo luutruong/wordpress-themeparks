@@ -40,7 +40,7 @@ class TP_ThemeParks_Cron
 
     protected static function sync_wait_times(TP_ThemeParks_Api $api, $park)
     {
-        TP_ThemeParks::log('<---- sync_wait_times(' . $park->park_id . ') ---->');
+        TP_ThemeParks::log('<---- sync_wait_times(' . $park->name . ') ---->');
         $start = microtime(true);
         $db = TP_ThemeParks::db();
         $extra_data = json_decode($park->extra_data, true);
@@ -49,6 +49,8 @@ class TP_ThemeParks_Cron
         if (empty($wait_times)) {
             return;
         }
+
+        $imported = 0;
 
         foreach ($wait_times as $wait_entry) {
             if (!is_int($wait_entry['waitTime'])) {
@@ -61,10 +63,16 @@ class TP_ThemeParks_Cron
                 continue;
             }
 
+            $status = empty($wait_entry['lastUpdate']) ? '' : strtolower($wait_entry['status']);
+            if ($status !== 'operating') {
+                // do not import other status.
+                continue;
+            }
+
             $attraction_data = [
                 'name' => $wait_entry['name'],
                 'active' => $wait_entry['active'] ? 1 : 0,
-                'status' => empty($wait_entry['lastUpdate']) ? '' : strtolower($wait_entry['status']),
+                'status' => $status,
                 'attraction_type' => strtolower($type),
                 'entity_id' => $type_id,
                 'latitude' => floatval($wait_entry['meta']['latitude'] ?? 0),
@@ -91,7 +99,10 @@ class TP_ThemeParks_Cron
                 'extra_data' => json_encode($wait_entry),
                 'created_date' => time()
             ]);
+            $imported++;
         }
+
+        TP_ThemeParks::log('  -> Imported: ' . $imported . ' records');
 
         $timeElapsed = microtime(true) - $start;
         TP_ThemeParks::log('Time elapsed: ' . $timeElapsed . ' seconds');

@@ -307,14 +307,21 @@ class TP_ThemeParks_Park {
             ];
         }
 
-        $timeElapsed = microtime(true) - $start;
-        TP_ThemeParks::log('get_wait_data_charts time elapsed: ' . $timeElapsed . ' seconds');
+        $time_elapsed = microtime(true) - $start;
+        TP_ThemeParks::log('get_wait_data_charts time elapsed: ' . $time_elapsed . ' seconds');
 
         return $data;
     }
 
     public function get_wait_data_chart(DateTime $start_date, DateTime $end_date, array $options = [])
     {
+        TP_ThemeParks::log(sprintf(
+            '<---- get_wait_data_chart(%s, %s) ---->',
+            $start_date->format(DateTime::ISO8601),
+            $end_date->format(DateTime::ISO8601)
+        ), false);
+        $start = microtime(true);
+
         $whereClause = '';
         if (!empty($options['attraction_id'])) {
             $whereClause = sprintf('AND `attraction_id` = %d', intval($options['attraction_id']));
@@ -349,6 +356,7 @@ class TP_ThemeParks_Park {
                 ORDER BY `created_date`
             ", $this->park->park_id, $start_date->getTimestamp(), $end_date->getTimestamp(), 'operating');
         }
+        TP_ThemeParks::log($query, false);
 
         $records = $db->get_results($query, ARRAY_A);
         $data = [];
@@ -379,6 +387,9 @@ class TP_ThemeParks_Park {
                 $data[] = [$time, floor(array_sum($wait_times) / count($wait_times))];
             }
         }
+
+        $time_elapsed = microtime(true) - $start;
+        TP_ThemeParks::log(' -> Time elapsed: ' . $time_elapsed . ' seconds', false);
 
         return $data;
     }
