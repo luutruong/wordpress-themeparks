@@ -590,6 +590,12 @@ class TP_ThemeParks {
         if (!$db->query("SHOW COLUMNS FROM `{$db->prefix}tp_parks` LIKE 'image_url'")) {
             $db->query("ALTER TABLE `{$db->prefix}tp_parks` ADD COLUMN `image_url` VARCHAR(255) NOT NULL DEFAULT ''");
         }
+
+        if (!$db->query("SHOW INDEXES FROM `{$db->prefix}tp_park_wait` LIKE `Key_name` = \'park_status_date\'")) {
+            $db->query("
+                ALTER TABLE `{$db->prefix}tp_park_wait` ADD KEY `park_status_date` (`park_id`, `status`, `created_date`)
+            ");
+        }
     }
 
     public static function db(): \wpdb
