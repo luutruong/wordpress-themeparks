@@ -1,6 +1,7 @@
 <?php
 
 require_once TP_THEMEPARKS__PLUGIN_DIR . 'class.themeparks.php';
+require_once TP_THEMEPARKS__PLUGIN_DIR . 'includes/class-file-cache.php';
 
 class TP_ThemeParks_Park {
     /**
@@ -322,6 +323,18 @@ class TP_ThemeParks_Park {
         ), false);
         $start = microtime(true);
 
+        $cacheId = md5(
+            __METHOD__
+            . $start_date->format(DateTime::ISO8601)
+            . $end_date->format(DateTime::ISO8601)
+            . serialize($options)
+        );
+        $cached = TP_ThemeParks_FileCache::get($cacheId);
+        if ($cached) {
+            TP_ThemeParks::log(' -> retrieve from cache.');
+            return $cached;
+        }
+
         $whereClause = '';
         if (!empty($options['attraction_id'])) {
             $whereClause = sprintf('AND `attraction_id` = %d', intval($options['attraction_id']));
@@ -358,10 +371,13 @@ class TP_ThemeParks_Park {
         }
         TP_ThemeParks::log($query, false);
 
+        $query_start = microtime(true);
         $records = $db->get_results($query, ARRAY_A);
+        TP_ThemeParks::log(' -> Query timing: ' . (microtime(true) - $query_start), false);
         $data = [];
 
         $grouped = $this->group_results($records, $groupType);
+        $cacheable = false;
 
         if ($groupType === 'daily') {
             $_start = clone $start_date;
@@ -380,6 +396,7 @@ class TP_ThemeParks_Park {
 
                 $_start->modify('+1 day');
             }
+            $cacheable = true;
         } else {
             foreach ($grouped as $pair) {
                 list($time, $wait_times) = $pair;
@@ -390,6 +407,10 @@ class TP_ThemeParks_Park {
 
         $time_elapsed = microtime(true) - $start;
         TP_ThemeParks::log(' -> Time elapsed: ' . $time_elapsed . ' seconds', false);
+
+        if ($cacheable) {
+            TP_ThemeParks_FileCache::save($cacheId, $data, 30);
+        }
 
         return $data;
     }
